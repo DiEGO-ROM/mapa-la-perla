@@ -4,6 +4,7 @@
   cada tienda (vitrina, toldo y letrero) y la utilería grande de cada experiencia.
 */
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const S = 0.2;                 // unidades 3D por píxel del plano
 const ALTO_NIVEL = 5.4;        // altura de cada nivel
@@ -129,6 +130,7 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
   sol.castShadow = true;
   sol.shadow.mapSize.set(movil ? 1024 : 2048, movil ? 1024 : 2048);
   Object.assign(sol.shadow.camera, { left: -150, right: 150, top: 150, bottom: -150, near: 10, far: 400 });
+  sol.shadow.camera.updateProjectionMatrix();
   sol.shadow.bias = -0.0006;
   sol.shadow.normalBias = 0.05;
   scene.add(sol, sol.target);
@@ -209,6 +211,7 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
   });
 
   // ---------- Frentes de tienda (planta baja): vitrina, toldo y letrero al frente ----------
+  const letrerosAtlas = [];
   const vidrio = std('#2a3a4c', { roughness: .1, metalness: .5, emissive: '#ffd59a', emissiveIntensity: .05 });
   const pb = D.NIVELES[0].tiendas;
   const fueraDeEdificio = (x, y, propio) => {
@@ -248,10 +251,9 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
       bordes(toldo.geometry, toldo);
       // franjas blancas en el toldo
       for (let i = -2; i <= 2; i += 2) { const fr = caja(ancho * .9 / 7, .16, 1.32, basico('#ffffff'), i * ancho * .9 / 7, 2.95, .85, g); fr.rotation.x = .32; fr.castShadow = false; }
-      if (fps && (k === 0 || f.len > 50)) {
+      if (fps && (k === 0 || (f.len > 50 && !movil))) {
         const w = Math.min(ancho * .84, Math.max(3, t.nombre.length * .55 + 1.6), 13);
-        const l = letreroPlano(t.nombre, w, 1.15, { acento: color }, g);
-        l.position.set(0, 3.75, .32);
+        letrerosAtlas.push({ texto: t.nombre, acento: color, w, h: 1.15, grupo: g, pos: [0, 3.75, .32] });
       }
     });
   });
@@ -299,6 +301,7 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
     const b3 = malla(new THREE.CylinderGeometry(1.6, 1.2, .45, 32), piedra, fx, 5.5, fz, props); bordes(b3.geometry, b3);
     // la perla
     const perla = malla(new THREE.SphereGeometry(1.25, 40, 28), new THREE.MeshPhysicalMaterial({ color: '#fff9ff', roughness: .15, clearcoat: 1, sheen: 1, sheenColor: new THREE.Color('#ffb3d3'), iridescence: 1, iridescenceIOR: 1.4 }), fx, 6.9, fz, props);
+    perla.userData.vivo = true;
     animados.push((dt, t) => { perla.rotation.y = t * .4; perla.position.y = 6.9 + Math.sin(t * 1.5) * .12; });
     // chorros: central alto y ocho arcos desde la orilla
     chorros(movil ? 260 : 420, () => { const a = Math.random() * Math.PI * 2, rr = Math.random() * .6; return { p: [fx, 7.6, fz], v: [Math.cos(a) * rr, 8 + Math.random() * 2, Math.sin(a) * rr], piso: 1.1 }; }, props, .4);
@@ -358,6 +361,7 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
     const bola = malla(new THREE.SphereGeometry(1.6, 28, 20), std('#ff6b2c', { roughness: .6 }), 0, 2.7, 0, balon);
     [0, Math.PI / 2].forEach((r0) => { const l = malla(new THREE.TorusGeometry(1.62, .06, 6, 40), std(INK), 0, 2.7, 0, balon, false); l.rotation.y = r0; });
     const ec = malla(new THREE.TorusGeometry(1.62, .06, 6, 40), std(INK), 0, 2.7, 0, balon, false); ec.rotation.x = Math.PI / 2;
+    bola.userData.vivo = true;
     animados.push((dt, t) => { bola.rotation.y = t * .8; });
     circulos.push({ x: (x1 + x2) / 2 - w * 2, y: (y1 + y2) / 2 - h * 1.6, r: 8 });
   }
@@ -384,6 +388,7 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
     // farolitos de colores
     for (let i = 0; i < 10; i++) {
       const f = malla(new THREE.SphereGeometry(.38, 14, 10), basico(PALETA[i % 6]), cx - w * .35 + (i % 5) * w * .175, alto - .8, cz + (i < 5 ? -h * .2 : h * .2), props, false);
+      f.userData.vivo = true;
       animados.push((dt, t) => { f.position.y = alto - .8 + Math.sin(t * 2 + i) * .08; });
     }
     // obras y mesas de artesanos
@@ -430,7 +435,7 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
     const c2 = malla(cg, std('#ff9f1c'), X(cx) - 2.5, 0, Z(cy), props); c2.rotation.y = Math.PI;
     const riel = malla(new THREE.CylinderGeometry(.09, .09, 8, 8), metal, X(cx), .9, Z(cy) + 4, props); riel.rotation.z = Math.PI / 2;
     // skater que va y viene
-    const sk = new THREE.Group(); props.add(sk);
+    const sk = new THREE.Group(); sk.userData.vivo = true; props.add(sk);
     bloque(1.5, .12, .45, std('#ff5fa2'), 0, .12, 0, sk);
     bloque(.5, 1.1, .4, std('#3d6bff'), 0, .85, 0, sk);
     bloque(.45, .7, .35, std('#ffc31f'), 0, 1.75, 0, sk);
@@ -492,7 +497,7 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
       caja(1.2, .55, .5, m, 0, .7, 0, g2); caja(.46, .44, .42, m, .68, 1, 0, g2); caja(.42, .1, .1, m, -.72, .9, 0, g2);
       caja(.12, .2, .12, std(INK), .62, 1.3, .14, g2); caja(.12, .2, .12, std(INK), .62, 1.3, -.14, g2);
       [[.4, .16], [.4, -.16], [-.4, .16], [-.4, -.16]].forEach(([a, b]) => caja(.13, .45, .13, m, a, .22, b, g2));
-      props.add(g2);
+      g2.userData.vivo = true; props.add(g2);
       const r0 = 1.6 + i * 1.1, w0 = (i % 2 ? -1 : 1) * (.8 + i * .15);
       animados.push((dt, t) => {
         const a = t * w0 + i * 2;
@@ -567,7 +572,7 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
     const col = new THREE.Group(); col.position.set(X(sx), 0, Z(sy)); col.rotation.y = rot; props.add(col);
     bloque(.25, 4.2, .25, std('#3d6bff'), -2.4, 2.1, 0, col); bloque(.25, 4.2, .25, std('#3d6bff'), 2.4, 2.1, 0, col); bloque(5.2, .25, .25, std('#3d6bff'), 0, 4.2, 0, col);
     [-1.2, 1.2].forEach((dx, i) => {
-      const a = new THREE.Group(); a.position.set(dx, 4.2, 0); col.add(a);
+      const a = new THREE.Group(); a.userData.vivo = true; a.position.set(dx, 4.2, 0); col.add(a);
       caja(.05, 3, .05, metal, -.4, -1.5, 0, a); caja(.05, 3, .05, metal, .4, -1.5, 0, a); bloque(1, .14, .55, colorMat[i ? 2 : 4], 0, -3, 0, a);
       animados.push((dt, t) => { a.rotation.x = Math.sin(t * 2.2 + i * 1.4) * .6; });
     });
@@ -584,7 +589,7 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
     const [cx2, cy2] = P(165);
     const carr = new THREE.Group(); carr.position.set(X(cx2), 0, Z(cy2)); props.add(carr);
     const base = malla(new THREE.CylinderGeometry(3.4, 3.6, .6, 32), std('#ffffff'), 0, .3, 0, carr); bordes(base.geometry, base);
-    const giro = new THREE.Group(); giro.position.y = .6; carr.add(giro);
+    const giro = new THREE.Group(); giro.userData.vivo = true; giro.position.y = .6; carr.add(giro);
     const tTecho = lienzo(256, 32, (ctx, W, H) => { for (let i = 0; i < 16; i++) { ctx.fillStyle = i % 2 ? '#ffffff' : '#ff5fa2'; ctx.fillRect(i * 16, 0, 16, H); } });
     malla(new THREE.ConeGeometry(3.8, 1.8, 16), std('#ffffff', { map: tTecho }), 0, 4.2, 0, giro);
     malla(new THREE.CylinderGeometry(.35, .35, 3.6, 12), std('#ffc31f'), 0, 1.8, 0, giro);
@@ -592,7 +597,7 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
       const a = (i / 6) * Math.PI * 2;
       const poste = new THREE.Group(); poste.position.set(Math.cos(a) * 2.5, 0, Math.sin(a) * 2.5); giro.add(poste);
       caja(.08, 3.3, .08, metal, 0, 1.65, 0, poste);
-      const caballo = bloque(1.1, .55, .4, colorMat[i], 0, 1.1, 0, poste); caballo.rotation.y = -a;
+      const caballo = bloque(1.1, .55, .4, colorMat[i], 0, 1.1, 0, poste); caballo.rotation.y = -a; caballo.userData.vivo = true;
       animados.push((dt, t) => { caballo.position.y = 1.1 + Math.sin(t * 3 + i) * .25; });
     }
     animados.push((dt) => { giro.rotation.y += dt * .7; });
@@ -601,7 +606,7 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
     const [bx, by] = P(215);
     const sb = new THREE.Group(); sb.position.set(X(bx), 0, Z(by)); sb.rotation.y = rot; props.add(sb);
     bloque(.6, .9, .6, std('#3d6bff'), 0, .45, 0, sb);
-    const tabla = new THREE.Group(); tabla.position.y = .95; sb.add(tabla);
+    const tabla = new THREE.Group(); tabla.userData.vivo = true; tabla.position.y = .95; sb.add(tabla);
     bloque(5, .2, .5, std('#ffc31f'), 0, 0, 0, tabla);
     bloque(.5, .5, .5, std('#ff5fa2'), -2.2, .3, 0, tabla); bloque(.5, .5, .5, std('#1fb36b'), 2.2, .3, 0, tabla);
     animados.push((dt, t) => { tabla.rotation.z = Math.sin(t * 2) * .28; });
@@ -626,7 +631,7 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
     // reflectores giratorios
     const conoMat = new THREE.MeshBasicMaterial({ color: '#fff1b8', transparent: true, opacity: .18, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false });
     [-3, 0, 3].forEach((x, i) => {
-      const r = new THREE.Group(); r.position.set(x, 8.2, -2.4); foro.add(r);
+      const r = new THREE.Group(); r.userData.vivo = true; r.position.set(x, 8.2, -2.4); foro.add(r);
       const cono = new THREE.Mesh(new THREE.ConeGeometry(1.8, 7, 20, 1, true), conoMat); cono.position.y = -3.5; r.add(cono);
       animados.push((dt, t) => { r.rotation.z = Math.sin(t * 1.2 + i * 2) * .5; r.rotation.x = .35 + Math.cos(t * .9 + i) * .2; });
     });
@@ -690,8 +695,8 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
   // ---------- Autos ----------
   {
     const colores = ['#ff6b2c', '#3d6bff', '#ffffff', '#ffc31f', '#1fb36b', '#ff5fa2', '#141414'];
-    for (let i = 0; i < 12; i++) {
-      const g = new THREE.Group();
+    for (let i = 0; i < (movil ? 7 : 10); i++) {
+      const g = new THREE.Group(); g.userData.vivo = true;
       const c = std(colores[i % colores.length], { roughness: .4 });
       caja(4, 1, 1.9, c, 0, .8, 0, g); caja(2.2, .8, 1.7, std('#9fd3ff', { roughness: .2 }), -.2, 1.6, 0, g);
       [[-1.3, .9], [1.3, .9], [-1.3, -.9], [1.3, -.9]].forEach(([a, b]) => { const r = malla(new THREE.CylinderGeometry(.38, .38, .25, 10), std(INK), a, .38, b, g); r.rotation.x = Math.PI / 2; });
@@ -744,15 +749,161 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
     }
   });
 
+  /* ---------- Losas de Nivel 1 y 2 con barandales de vidrio alrededor de los vacíos ---------- */
+  {
+    const exterior = [[8, 4], [1186, 4], [1186, 1052], [268, 1052], [268, 866], [415, 866], [415, 787], [249, 787], [249, 730], [125, 730], [125, 787], [8, 787]];
+    const suroeste = [[8, 866], [124, 866], [124, 1052], [8, 1052]];
+    const huecos = [E.calzada, E.plazaNorte, E.plazaSur, E.diagonalNE, E.diagonalSE];
+    const texL = baldosa('#efeae0', '#ddd6c8', 4); texL.repeat.set(.25, .25);
+    const matL = std('#ffffff', { map: texL, roughness: .9 });
+    const vidrioB = new THREE.MeshStandardMaterial({ color: '#bfe6ff', transparent: true, opacity: .35, roughness: .1, metalness: .1, depthWrite: false });
+    const barra = std(INK);
+    const barandal = (ax, az, bx, bz, y, padre) => {
+      const len = Math.hypot(bx - ax, bz - az); if (len < .3) return;
+      const g = new THREE.Group(); g.position.set((ax + bx) / 2, y, (az + bz) / 2); g.rotation.y = -Math.atan2(bz - az, bx - ax); padre.add(g);
+      caja(len, .1, .14, barra, 0, 1.1, 0, g);
+      caja(len, .1, .1, barra, 0, .12, 0, g);
+      const vid = caja(len, .9, .05, vidrioB, 0, .6, 0, g); vid.castShadow = false;
+      const n = Math.max(1, Math.round(len / 2.4));
+      for (let i = 0; i <= n; i++) caja(.09, 1.15, .09, barra, -len / 2 + (i * len) / n, .58, 0, g);
+    };
+    const r = E.rotonda;
+    [1, 2].forEach((n) => {
+      const y = n * ALTO_NIVEL + .18;
+      const sh = forma(exterior);
+      huecos.forEach((h) => sh.holes.push(new THREE.Path(h.map(([x, yy]) => new THREE.Vector2(X(x), -Z(yy))))));
+      const hc = new THREE.Path(); hc.absarc(X(r.cx), -Z(r.cy), r.r * S, 0, Math.PI * 2, true); sh.holes.push(hc);
+      [sh, forma(suroeste)].forEach((fz) => {
+        const geo = new THREE.ExtrudeGeometry(fz, { depth: .35, bevelEnabled: false, curveSegments: 24 });
+        geo.rotateX(-Math.PI / 2);
+        const m = new THREE.Mesh(geo, matL); m.position.y = y - .35; m.castShadow = true; m.receiveShadow = true;
+        niveles[n].add(m);
+        bordes(geo, niveles[n], m.position, .9);
+      });
+      const tramos = [];
+      const poli = (pts, cerrar) => { for (let i = 0; i < pts.length - (cerrar ? 0 : 1); i++) tramos.push([pts[i], pts[(i + 1) % pts.length]]); };
+      huecos.forEach((h) => poli(h, true));
+      poli(exterior.slice(3), false);
+      poli([[8, 866], [124, 866], [124, 1052]], false);
+      tramos.forEach(([[ax, ay], [bx, by]]) => barandal(X(ax), Z(ay), X(bx), Z(by), y, niveles[n]));
+      const cx = X(r.cx), cz = Z(r.cy), rr = r.r * S;
+      const aro = malla(new THREE.TorusGeometry(rr, .07, 6, 72), barra, cx, y + 1.1, cz, niveles[n]); aro.rotation.x = Math.PI / 2;
+      malla(new THREE.CylinderGeometry(rr, rr, .9, 72, 1, true), vidrioB, cx, y + .6, cz, niveles[n], false);
+      for (let i = 0; i < 28; i++) { const a = (i / 28) * Math.PI * 2; caja(.09, 1.15, .09, barra, cx + Math.cos(a) * rr, y + .58, cz + Math.sin(a) * rr, niveles[n]); }
+    });
+  }
+
+  /* ---------- Atlas de letreros: todos los nombres de tienda en pocas texturas ---------- */
+  if (letrerosAtlas.length) {
+    const AT = 2048, ALTO = 72;
+    const paginas = [];
+    let ctx = null, x = 0, y = 0;
+    const nueva = () => { const c = document.createElement('canvas'); c.width = c.height = AT; ctx = c.getContext('2d'); x = 0; y = 0; paginas.push({ c, geos: [] }); };
+    nueva();
+    letrerosAtlas.forEach((l) => {
+      const pw = Math.min(AT, Math.round((ALTO * l.w) / l.h));
+      if (x + pw > AT) { x = 0; y += ALTO + 4; }
+      if (y + ALTO > AT) nueva();
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(x, y, pw, ALTO);
+      ctx.lineWidth = 6; ctx.strokeStyle = INK; ctx.strokeRect(x + 3, y + 3, pw - 6, ALTO - 6);
+      ctx.fillStyle = l.acento; ctx.fillRect(x + 8, y + 8, ALTO - 16, ALTO - 16);
+      ctx.fillStyle = INK; ctx.fillRect(x + ALTO - 8, y + 8, 4, ALTO - 16);
+      ajustar(ctx, l.texto, pw - ALTO - 18, ALTO * .5, 900);
+      ctx.fillStyle = INK; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(l.texto, x + ALTO + (pw - ALTO) / 2 - 4, y + ALTO * .54);
+      const g = new THREE.PlaneGeometry(l.w, l.h);
+      const uv = g.attributes.uv;
+      for (let i = 0; i < uv.count; i++) uv.setXY(i, (x + uv.getX(i) * pw) / AT, 1 - (y + (1 - uv.getY(i)) * ALTO) / AT);
+      l.grupo.updateMatrixWorld(true);
+      g.applyMatrix4(new THREE.Matrix4().makeTranslation(l.pos[0], l.pos[1], l.pos[2]).premultiply(l.grupo.matrixWorld));
+      paginas[paginas.length - 1].geos.push(g);
+      x += pw + 4;
+    });
+    paginas.forEach((p) => {
+      const t = new THREE.CanvasTexture(p.c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+      const m = new THREE.Mesh(mergeGeometries(p.geos), basico('#ffffff', { map: t }));
+      m.userData.noFusionar = true; niveles[0].add(m);
+    });
+  }
+
+  /* ---------- Fusión de geometría: muchas piezas -> pocas llamadas de dibujo ---------- */
+  const SOLO = ['position', 'normal', 'uv'];
+  const limpia = (geo, attrs = SOLO) => {
+    const g = geo.index ? geo.toNonIndexed() : geo.clone();
+    Object.keys(g.attributes).forEach((k) => { if (!attrs.includes(k)) g.deleteAttribute(k); });
+    if (attrs.includes('uv') && !g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+    if (attrs.includes('normal') && !g.attributes.normal) g.computeVertexNormals();
+    g.clearGroups();
+    return g;
+  };
+  const claveMat = (m) => [m.type, m.color && m.color.getHexString(), m.map ? m.map.uuid : '', m.transparent, m.opacity, m.side, m.emissive ? m.emissive.getHexString() : '', m.emissiveIntensity, m.roughness, m.metalness, m.wireframe, m.blending, m.toneMapped, m.depthWrite, m.flatShading].join('|');
+  const tieneVivo = (o, tope) => { for (let p = o; p && p !== tope; p = p.parent) if (p.userData && p.userData.vivo) return true; return false; };
+  function fusionar(grupo, conVivos = false) {
+    grupo.updateMatrixWorld(true);
+    const inv = new THREE.Matrix4().copy(grupo.matrixWorld).invert();
+    const cubos = new Map(); const lineas = []; const quitar = [];
+    grupo.traverse((o) => {
+      if (o === grupo || tieneVivo(o, grupo)) return; // lo que se anima por separado no se fusiona
+      const rel = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld);
+      if (o.isMesh && !o.isInstancedMesh && !Array.isArray(o.material) && !o.userData.tienda && !o.userData.zona && !o.userData.noFusionar) {
+        const k = claveMat(o.material) + (o.castShadow ? 's' : '');
+        if (!cubos.has(k)) cubos.set(k, { mat: o.material, geos: [], sombra: o.castShadow, recibe: o.receiveShadow });
+        const g = limpia(o.geometry); g.applyMatrix4(rel); cubos.get(k).geos.push(g); quitar.push(o);
+      } else if (o.isLineSegments && !o.userData.noFusionar) {
+        const g = limpia(o.geometry, ['position']); g.applyMatrix4(rel); lineas.push(g); quitar.push(o);
+      }
+    });
+    quitar.forEach((o) => { if (o.parent) o.parent.remove(o); });
+    cubos.forEach(({ mat, geos, sombra, recibe }) => {
+      const m = new THREE.Mesh(mergeGeometries(geos), mat); m.castShadow = sombra; m.receiveShadow = recibe; m.userData.noFusionar = true; grupo.add(m);
+    });
+    if (lineas.length) {
+      const l = new THREE.LineSegments(mergeGeometries(lineas), new THREE.LineBasicMaterial({ color: INK, transparent: true, opacity: .9 }));
+      l.userData.noFusionar = true; grupo.add(l);
+      return l;
+    }
+    return null;
+  }
+  // tiendas: una malla por color y nivel (techos y muros por separado); las originales quedan invisibles para tocarlas
+  const fusionTiendas = [[], [], []];
+  const dividir = (geo) => {
+    const partes = { 0: [], 1: [] };
+    geo.groups.forEach((gr) => {
+      const ng = new THREE.BufferGeometry();
+      SOLO.forEach((k) => { const a = geo.attributes[k]; ng.setAttribute(k, new THREE.BufferAttribute(a.array.slice(gr.start * a.itemSize, (gr.start + gr.count) * a.itemSize), a.itemSize)); });
+      partes[gr.materialIndex ? 1 : 0].push(ng);
+    });
+    return [partes[0], partes[1]];
+  };
+  niveles.forEach((g, n) => {
+    const porMat = new Map();
+    tiendasMallas.filter((m) => m.userData.nivel === n).forEach((m) => {
+      if (!porMat.has(m.userData.mats)) porMat.set(m.userData.mats, { tapas: [], lados: [] });
+      m.updateMatrix();
+      const geo = m.geometry.clone(); geo.applyMatrix4(m.matrix);
+      const [tapas, lados] = dividir(geo);
+      porMat.get(m.userData.mats).tapas.push(...tapas); porMat.get(m.userData.mats).lados.push(...lados);
+      m.visible = false;
+    });
+    porMat.forEach((v, mats) => {
+      const t = new THREE.Mesh(mergeGeometries(v.tapas), mats[0]); const l = new THREE.Mesh(mergeGeometries(v.lados), mats[1]);
+      [t, l].forEach((x) => { x.castShadow = true; x.receiveShadow = true; x.userData.noFusionar = true; g.add(x); });
+      fusionTiendas[n].push({ t, l, mats });
+    });
+  });
+  // piezas animadas: cada grupo se compacta por dentro
+  const vivos = [];
+  raiz.traverse((o) => { if (o.isGroup && o.userData.vivo) vivos.push(o); });
+  vivos.forEach((g) => fusionar(g, true));
+  fusionar(suelo);
+  const lineasNivel = niveles.map((g) => fusionar(g));
+
   function mostrarNivel(nivel) {
     niveles.forEach((g, i) => {
       g.visible = i <= nivel;
-      g.children.forEach((c) => {
-        if (!c.userData || !c.userData.tienda) return;
-        const activo = i === nivel;
-        c.material = activo ? c.userData.mats : gris;
-        if (c.userData.bordes) c.userData.bordes.material.opacity = activo ? .9 : .25;
-      });
+      const activo = i === nivel;
+      fusionTiendas[i].forEach(({ t, l, mats }) => { t.material = activo ? mats[0] : gris[0]; l.material = activo ? mats[1] : gris[1]; });
+      if (lineasNivel[i]) lineasNivel[i].material.opacity = activo ? .9 : .25;
     });
   }
 

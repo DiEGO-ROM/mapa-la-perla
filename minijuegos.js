@@ -3,6 +3,7 @@
   Uso: abrirMinijuego('tiro', { zona, alTerminar: (estrellas, puntos) => {} })
 */
 const C = { ink: '#141414', naranja: '#ff6b2c', verde: '#1fb36b', rosa: '#ff5fa2', azul: '#3d6bff', amarillo: '#ffc31f', morado: '#a259ff', gris: '#f4f4f2', madera: '#c9864a' };
+const PALETA_MJ = [C.naranja, C.verde, C.rosa, C.azul, C.amarillo, C.morado];
 const azar = (a, b) => a + Math.random() * (b - a);
 const elegir = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const barajar = (a) => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
@@ -124,62 +125,123 @@ export const JUEGOS = {
 
   /* --------------------------- Las Rampas --------------------------- */
   truco: {
-    titulo: 'Truco perfecto', duracion: 25, umbrales: [400, 900, 1500], unidad: 'puntos',
-    instrucciones: 'El skater sube y baja solo. Toca justo cuando llegue a lo más alto de la rampa para hacer un truco. Encadena trucos para hacer combo.',
+    titulo: 'Truco perfecto', duracion: 30, umbrales: [700, 1800, 3200], unidad: 'puntos',
+    instrucciones: 'El skater vuela en cada orilla de la rampa. Mientras está en el aire, desliza el dedo hacia la flecha que aparece para clavar el truco. Justo en lo más alto vale más. ¡Encadena trucos para multiplicar!',
     crear(W, H) {
-      const s = { puntos: 0, t: 0, combo: 0, caido: 0, giro: 0, fx: flotantes(), hechoEnPico: false, ultimoLado: 0 };
-      const R = Math.min(W * .42, H * .42), cx = W / 2, cy = H * .3;
-      const A = 1.2, w = (2 * Math.PI) / 2.3;
-      const TRUCOS = ['OLLIE', 'KICKFLIP', 'HEELFLIP', '360', 'POP SHOVE-IT', 'TAILGRAB'];
-      const ang = () => A * Math.sin(w * s.t);
-      const enPico = () => Math.abs(Math.sin(w * s.t)) > .9;
-      s.presion = () => {
-        if (s.caido > 0) return;
-        if (enPico() && !s.hechoEnPico) {
-          s.hechoEnPico = true; s.combo++;
-          const p = Math.round(100 * (1 + (s.combo - 1) * .5));
-          s.puntos += p; s.giro = 1;
-          const a = ang();
-          s.fx.agregar(`${elegir(TRUCOS)} +${p}`, cx + Math.sin(a) * R, cy + Math.cos(a) * R - 70, C.naranja);
-          sonido('bien', 600 + s.combo * 50);
+      const R = Math.min(W * .4, H * .3), cx = W / 2, cy = H * .42;
+      const altoAire = Math.min(H * .2, 150);
+      const TA = .85;
+      const FLECHAS = { arriba: ['↑', '360 FLIP'], abajo: ['↓', 'INDY GRAB'], izq: ['←', 'KICKFLIP'], der: ['→', 'HEELFLIP'] };
+      const s = { puntos: 0, t: 0, fx: flotantes(), combo: 0, fase: 'rampa', p: .5, lado: 1, u: 0, flecha: null, hecho: false, caida: 0, giro: 0, giroTipo: 'arriba', chispas: [], exitos: 0, publico: 0, mejorCombo: 0 };
+      const cruce = () => Math.max(.8, 1.3 - s.exitos * .035);
+      const chispa = (x, y, n = 16) => { for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, v = azar(80, 260); s.chispas.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 80, vida: 1, c: elegir([C.amarillo, C.rosa, C.naranja, '#fff']) }); } };
+      const posRampa = () => { const f = s.lado * (Math.PI / 2) * Math.cos(Math.PI * s.p); return { x: cx + R * Math.sin(f), y: cy + R * Math.cos(f), ang: -f }; };
+      const posAire = () => ({ x: cx + s.lado * (R + 6), y: cy - altoAire * 4 * s.u * (1 - s.u), ang: s.lado * Math.PI / 2 * (1 - 2 * s.u) * .25 });
+      s.desliz = (dx, dy) => {
+        if (s.fase !== 'aire' || s.hecho) return;
+        const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'der' : 'izq') : (dy < 0 ? 'arriba' : 'abajo');
+        const p = posAire();
+        if (dir === s.flecha) {
+          const perfecto = Math.abs(s.u - .5) < .18;
+          const mult = 1 + s.combo * .5;
+          const pts = Math.round(100 * mult * (perfecto ? 1.5 : 1));
+          s.puntos += pts; s.combo++; s.exitos++; s.hecho = true; s.giro = 1; s.giroTipo = dir; s.publico = 1;
+          s.mejorCombo = Math.max(s.mejorCombo, s.combo);
+          s.fx.agregar(`${perfecto ? '¡PERFECTO! ' : ''}${FLECHAS[dir][1]} +${pts}`, cx, p.y - 60, perfecto ? C.verde : C.naranja);
+          chispa(p.x, p.y, perfecto ? 26 : 14);
+          sonido('bien', 600 + s.combo * 60);
         } else {
-          s.combo = 0; s.caido = .9;
-          s.fx.agregar('¡AU!', cx, cy + R - 40, C.rosa);
+          s.fase = 'caida'; s.caida = 1.1; s.combo = 0; s.hecho = true;
+          s.fx.agregar('¡BAJÓN! era ' + FLECHAS[s.flecha][0], cx, cy - 40, C.rosa);
           sonido('mal');
         }
       };
+      s.toque = () => {
+        if (s.fase !== 'aire' || s.hecho) return;
+        s.hecho = true; s.puntos += 40; s.giro = .5; s.giroTipo = 'abajo';
+        s.fx.agregar('OLLIE +40', cx, posAire().y - 60, C.ink);
+        sonido('nota', 520);
+      };
       s.actualizar = (dt) => {
         s.t += dt; s.fx.paso(dt);
-        if (s.caido > 0) s.caido -= dt;
-        if (s.giro > 0) s.giro = Math.max(0, s.giro - dt * 2.2);
-        // Al entrar a un pico nuevo: si en el anterior no hubo truco, se rompe el combo
-        const ep = enPico();
-        if (ep && !s.estabaEnPico) { if (!s.hechoEnPico && s.t > 1.5) s.combo = 0; s.hechoEnPico = false; }
-        s.estabaEnPico = ep;
+        s.giro = Math.max(0, s.giro - dt * 2.4);
+        s.publico = Math.max(0, s.publico - dt * 1.5);
+        s.chispas.forEach((c) => { c.vy += 500 * dt; c.x += c.vx * dt; c.y += c.vy * dt; c.vida -= dt * 1.6; });
+        s.chispas = s.chispas.filter((c) => c.vida > 0);
+        if (s.fase === 'rampa') {
+          const antes = s.p;
+          s.p += dt / cruce();
+          if (antes < .62 && s.p >= .62) s.flecha = elegir(Object.keys(FLECHAS));
+          if (s.p >= 1) { s.fase = 'aire'; s.lado = -s.lado; s.u = 0; s.hecho = false; }
+        } else if (s.fase === 'aire') {
+          s.u += dt / TA;
+          if (s.u >= 1) {
+            if (!s.hecho) { if (s.combo > 0) s.fx.agregar('combo perdido', cx, cy, '#777'); s.combo = 0; }
+            s.fase = 'rampa'; s.p = 0; s.flecha = null;
+          }
+        } else if (s.fase === 'caida') {
+          s.caida -= dt;
+          if (s.caida <= 0) { s.fase = 'rampa'; s.p = .5; s.flecha = null; }
+        }
       };
       s.dibujar = (ctx) => {
-        ctx.fillStyle = '#fff6d6'; ctx.fillRect(0, 0, W, H);
-        ctx.lineWidth = 26; ctx.strokeStyle = '#d9dbe0';
-        ctx.beginPath(); ctx.arc(cx, cy, R + 13, Math.PI * .5 - A - .25, Math.PI * .5 + A + .25); ctx.stroke();
-        ctx.lineWidth = 3; ctx.strokeStyle = C.ink;
-        ctx.beginPath(); ctx.arc(cx, cy, R, Math.PI * .5 - A - .25, Math.PI * .5 + A + .25); ctx.stroke();
-        ctx.beginPath(); ctx.arc(cx, cy, R + 26, Math.PI * .5 - A - .25, Math.PI * .5 + A + .25); ctx.stroke();
-        [-1, 1].forEach((l) => {
-          const a = Math.PI * .5 + l * A;
-          ctx.strokeStyle = enPico() ? C.verde : C.amarillo; ctx.lineWidth = 10;
-          ctx.beginPath(); ctx.arc(cx, cy, R + 13, a - .12, a + .12); ctx.stroke();
-        });
-        const a = ang();
-        const px = cx + Math.sin(a) * R, py = cy + Math.cos(a) * R;
-        ctx.save(); ctx.translate(px, py); ctx.rotate(-a + s.giro * Math.PI * 2);
-        if (s.caido > 0 && Math.floor(s.caido * 10) % 2) ctx.globalAlpha = .4;
-        caja(ctx, -26, -10, 52, 8, C.naranja, 2);
-        circulo(ctx, -16, 2, 4, C.ink, 0); circulo(ctx, 16, 2, 4, C.ink, 0);
-        caja(ctx, -10, -52, 20, 40, C.azul, 3);
-        circulo(ctx, 0, -62, 10, '#ffd8b0', 3);
-        caja(ctx, -10, -74, 20, 7, C.rosa, 2);
-        ctx.restore(); ctx.globalAlpha = 1;
-        texto(ctx, s.combo > 1 ? `COMBO ×${s.combo}` : 'TOCA EN LO MÁS ALTO', W / 2, H * .9, { tam: 16, color: s.combo > 1 ? C.naranja : C.ink });
+        const cielo = ctx.createLinearGradient(0, 0, 0, H); cielo.addColorStop(0, '#ffd9a8'); cielo.addColorStop(1, '#fff6d6');
+        ctx.fillStyle = cielo; ctx.fillRect(0, 0, W, H);
+        // ciudad al fondo
+        for (let i = 0; i < 9; i++) { const w = W / 9, h = 40 + ((i * 53) % 70); ctx.fillStyle = i % 2 ? '#f3c79a' : '#ecb98a'; ctx.fillRect(i * w, cy - R * .6 - h, w - 4, h); }
+        // muro de grafiti
+        caja(ctx, cx - R - 30, cy - R * .6, R * 2 + 60, R * .34, C.ink, 3);
+        ['#ff5fa2', '#ffc31f', '#3d6bff', '#1fb36b', '#ff6b2c'].forEach((c, i) => circulo(ctx, cx - R + i * R * .5, cy - R * .43, R * .09 + (i % 2) * 6, c, 0));
+        texto(ctx, 'LA PERLA SKATE', cx, cy - R * .43, { tam: Math.min(26, R * .14), peso: 900, color: '#fff' });
+        // rampa en U
+        ctx.fillStyle = '#dfe2e8';
+        ctx.beginPath(); ctx.moveTo(cx - R - 40, cy); ctx.lineTo(cx - R, cy); ctx.arc(cx, cy, R, Math.PI, 0, true); ctx.lineTo(cx + R + 40, cy); ctx.lineTo(cx + R + 40, cy + R + 26); ctx.lineTo(cx - R - 40, cy + R + 26); ctx.closePath(); ctx.fill();
+        ctx.lineWidth = 4; ctx.strokeStyle = C.ink;
+        ctx.beginPath(); ctx.moveTo(cx - R - 40, cy); ctx.lineTo(cx - R, cy); ctx.arc(cx, cy, R, Math.PI, 0, true); ctx.lineTo(cx + R + 40, cy); ctx.stroke();
+        ctx.strokeRect(cx - R - 40, cy, R * 2 + 80, R + 26);
+        [-1, 1].forEach((l) => { caja(ctx, cx + l * R - 5, cy - 6, 10, 12, C.rosa, 3); });
+        // público
+        for (let i = 0; i < 12; i++) {
+          const x = (i + .5) * W / 12, salto = s.publico * Math.abs(Math.sin(s.t * 16 + i)) * 14;
+          circulo(ctx, x, H * .9 - salto, 12, ['#ffd8b0', '#c8955c', '#8a5a3a'][i % 3], 2.5);
+          caja(ctx, x - 12, H * .9 + 10 - salto, 24, 26, PALETA_MJ[i % 6], 2.5);
+        }
+        // skater
+        const p = s.fase === 'aire' ? posAire() : posRampa();
+        let ang = p.ang;
+        if (s.fase === 'caida') ang += (1.1 - s.caida) * 9;
+        ctx.save(); ctx.translate(p.x, p.y);
+        if (s.fase === 'aire') ctx.translate(-s.lado * 0, 0);
+        ctx.rotate(ang);
+        const g = s.giro * Math.PI * 2;
+        // tabla (gira según el truco)
+        ctx.save();
+        if (s.giroTipo === 'izq' || s.giroTipo === 'der') ctx.scale(1, Math.cos(g * (s.giroTipo === 'izq' ? 1 : -1)) || .05);
+        else ctx.rotate(s.giroTipo === 'arriba' ? g : 0);
+        caja(ctx, -28, -8, 56, 9, C.naranja, 2.5);
+        circulo(ctx, -18, 4, 4.5, C.ink, 0); circulo(ctx, 18, 4, 4.5, C.ink, 0);
+        ctx.restore();
+        const agachado = s.giroTipo === 'abajo' && s.giro > 0 ? .6 : 1;
+        caja(ctx, -11, -8 - 46 * agachado, 22, 46 * agachado, C.azul, 3);
+        circulo(ctx, 0, -20 - 46 * agachado, 11, '#ffd8b0', 3);
+        caja(ctx, -11, -33 - 46 * agachado, 22, 8, C.rosa, 2);
+        ctx.restore();
+        // flecha a deslizar
+        if (s.flecha && s.fase !== 'caida' && !(s.fase === 'aire' && s.hecho)) {
+          const activa = s.fase === 'aire';
+          const fx = cx + (s.fase === 'aire' ? s.lado : -s.lado) * Math.min(R * .55, 120), fy = cy - altoAire - 30;
+          const enPunto = activa && Math.abs(s.u - .5) < .18;
+          ctx.globalAlpha = activa ? 1 : .45;
+          caja(ctx, fx - 38, fy - 38, 76, 76, enPunto ? C.verde : activa ? C.amarillo : '#fff', 4, 5);
+          texto(ctx, FLECHAS[s.flecha][0], fx, fy + 2, { tam: 48, peso: 900 });
+          if (activa) { caja(ctx, fx - 38, fy + 46, 76, 10, '#fff', 2); caja(ctx, fx - 38 + 76 * .32, fy + 46, 76 * .36, 10, '#c8efd9', 0); caja(ctx, fx - 38 + 76 * Math.min(1, s.u) - 2, fy + 42, 4, 18, C.ink, 0); }
+          ctx.globalAlpha = 1;
+        }
+        s.chispas.forEach((c) => { ctx.globalAlpha = Math.max(0, c.vida); caja(ctx, c.x - 4, c.y - 4, 8, 8, c.c, 1.5); });
+        ctx.globalAlpha = 1;
+        caja(ctx, 14, 14, 112, 54, s.combo > 1 ? C.naranja : '#fff', 3, 3);
+        texto(ctx, 'COMBO', 70, 30, { tam: 10 }); texto(ctx, `×${(1 + s.combo * .5).toFixed(1)}`, 70, 52, { tam: 22, peso: 900 });
+        texto(ctx, s.fase === 'aire' && !s.hecho ? '¡DESLIZA HACIA LA FLECHA!' : 'Toca en el aire = ollie · desliza = truco', W / 2, H * .8, { tam: 13, color: C.ink });
         s.fx.dibujar(ctx);
       };
       return s;
@@ -364,55 +426,141 @@ export const JUEGOS = {
 
   /* --------------------------- El Patio --------------------------- */
   columpio: {
-    titulo: 'Columpio al cielo', duracion: 20, umbrales: [45, 70, 90], unidad: '% de altura',
-    instrucciones: 'Toca cuando el columpio pase por abajo (el aro verde) para tomar impulso. Si tocas a destiempo, pierdes vuelo. ¡Llega a las estrellas!',
+    titulo: 'Columpio al cielo', duracion: 60, umbrales: [90, 170, 240], unidad: 'puntos',
+    instrucciones: 'Toca cuando el columpio pase por abajo (aro verde) para tomar impulso. Cuando vayas alto, desliza hacia arriba o toca «¡SUÉLTATE!» para salir volando: atrapa globos y cae en el tapete. Tienes 3 intentos.',
     crear(W, H) {
-      const s = { puntos: 0, t: 0, fx: flotantes(), th: .25, w: 0, max: 0, estrellas: [30, 60, 90].map((n) => ({ n, ok: false })) };
-      const px = W / 2, py = H * .14, L = Math.min(H * .5, W * .38), marco = Math.min(W / 2 - 12, L + 46);
-      s.presion = () => {
+      const ESC = Math.max(14, Math.min(22, W / 26));       // píxeles por metro
+      const suelo = H * .8, origenX = W * .22;
+      const ph = Math.min(5.2, (suelo - H * .2) / ESC);     // altura del pivote en metros
+      const Lm = ph - 1.3;                                   // largo de las cadenas
+      const BOOST = 2.7;
+      const s = { puntos: 0, t: 0, fx: flotantes(), intento: 1, fase: 'impulso', th: .12, w: 0, maxTh: 0, cam: 0, nino: null, globos: [], tapete: null, espera: 0, fin: false, total: [] };
+      const aPant = (x, y) => [origenX + (x - s.cam) * ESC, suelo - y * ESC];
+      const preparar = () => {
+        s.fase = 'impulso'; s.th = .12; s.w = 0; s.maxTh = 0; s.nino = null; s.cam = 0;
+        const c = azar(14, 30);
+        s.tapete = { c, anillos: [[1.2, 50, C.rosa], [2.8, 25, C.amarillo], [4.6, 10, C.azul]] };
+        s.globos = Array.from({ length: 7 }, (_, i) => ({ x: 5 + i * azar(3.2, 4.8), y: azar(2.5, Math.min(11, ph + 3)), c: elegir([C.rosa, C.amarillo, C.azul, C.verde, C.naranja, C.morado]), tomado: 0 }));
+      };
+      preparar();
+      const boton = () => ({ x: W / 2 - 100, y: H * .86, w: 200, h: 50 });
+      const puedeSoltar = () => s.fase === 'impulso' && s.maxTh > .55;
+      const soltar = () => {
+        if (!puedeSoltar()) return;
+        const x = Lm * Math.sin(s.th), y = ph - Lm * Math.cos(s.th);
+        let vx = Lm * s.w * Math.cos(s.th) * BOOST, vy = Lm * s.w * Math.sin(s.th) * BOOST;
+        if (vx < 0) { vx = Math.abs(vx) * .25; vy = Math.abs(vy) * .2; }
+        s.nino = { x, y, vx, vy, rot: 0, globos: 0, estela: [] };
+        s.fase = 'vuelo';
+        sonido('ganar');
+      };
+      s.presion = (x, y) => {
+        const b = boton();
+        if (puedeSoltar() && x > b.x && x < b.x + b.w && y > b.y && y < b.y + b.h) return soltar();
+        if (s.fase !== 'impulso') return;
         if (Math.abs(s.th) < .3) {
           const dir = s.w === 0 ? 1 : Math.sign(s.w);
-          s.w += dir * 1.15; sonido('nota', 500 + s.puntos * 4);
-          s.fx.agregar('¡IMPULSO!', px, py + L + 60, C.verde);
-        } else { s.w *= .6; sonido('mal'); s.fx.agregar('¡a destiempo!', px, py + L + 60, C.rosa); }
+          s.w += dir * 1.05; sonido('nota', 480 + s.maxTh * 300);
+          s.fx.agregar('¡IMPULSO!', aPant(0, 1)[0], suelo - 40, C.verde);
+        } else { s.w *= .65; sonido('mal'); s.fx.agregar('a destiempo', aPant(0, 1)[0], suelo - 40, C.rosa); }
       };
+      s.desliz = (dx, dy) => { if (dy < -40) soltar(); };
       s.actualizar = (dt) => {
         s.t += dt; s.fx.paso(dt);
-        const pasos = 4;
-        for (let i = 0; i < pasos; i++) {
-          const h = dt / pasos;
-          s.w += (-(9.8 / 2.2) * Math.sin(s.th) - .12 * s.w) * h;
-          s.th += s.w * h;
+        // el columpio sigue meciéndose (con o sin niño)
+        for (let i = 0; i < 4; i++) { const h = dt / 4; s.w += (-(9.8 / 2.2) * Math.sin(s.th) - (s.fase === 'impulso' ? .1 : .5) * s.w) * h; s.th += s.w * h; }
+        s.th = Math.max(-1.45, Math.min(1.45, s.th));
+        if (s.fase === 'impulso') s.maxTh = Math.max(s.maxTh * (1 - dt * .15), Math.abs(s.th));
+        if (s.fase === 'vuelo') {
+          const n = s.nino;
+          n.vy -= 9.8 * dt; n.x += n.vx * dt; n.y += n.vy * dt; n.rot += dt * (4 + n.vx * .15);
+          n.estela.push([n.x, n.y]); if (n.estela.length > 26) n.estela.shift();
+          s.cam += (Math.max(0, n.x - (W * .45) / ESC) - s.cam) * Math.min(1, dt * 6);
+          s.globos.forEach((g) => { if (!g.tomado && Math.hypot(g.x - n.x, g.y - n.y) < 1.3) { g.tomado = 1; n.globos++; sonido('bien', 900); s.fx.agregar('+10', ...aPant(g.x, g.y), C.verde); } });
+          if (n.y <= 0) {
+            n.y = 0;
+            const d = Math.abs(n.x - s.tapete.c);
+            const anillo = s.tapete.anillos.find(([r]) => d <= r / 2);
+            const bono = anillo ? anillo[1] : 0;
+            const pts = Math.round(n.x * 2) + n.globos * 10 + bono;
+            s.puntos += pts; s.total.push(pts);
+            s.fx.agregar(`${n.x.toFixed(1)} m · +${pts}${bono ? ` (tapete +${bono})` : ''}`, W / 2, H * .3, bono ? C.verde : C.ink);
+            sonido(bono ? 'ganar' : 'golpe');
+            s.fase = 'aterriza'; s.espera = 1.8;
+          }
+        } else if (s.fase === 'aterriza') {
+          s.espera -= dt;
+          if (s.espera <= 0) { if (s.intento >= 3) { s.fin = true; s.fase = 'listo'; } else { s.intento++; preparar(); } }
         }
-        s.th = Math.max(-1.75, Math.min(1.75, s.th));
-        const alto = Math.min(100, Math.round(((1 - Math.cos(Math.abs(s.th))) / (1 - Math.cos(Math.PI / 2))) * 100));
-        s.max = Math.max(s.max, alto); s.puntos = s.max;
-        s.estrellas.forEach((e) => { if (!e.ok && alto >= e.n) { e.ok = true; sonido('ganar'); s.fx.agregar(`★ ${e.n}%`, px, H * .1, C.amarillo); } });
+        s.globos.forEach((g) => { if (g.tomado) g.tomado += dt * 3; });
       };
       s.dibujar = (ctx) => {
-        const cielo = ctx.createLinearGradient(0, 0, 0, H); cielo.addColorStop(0, '#bfe4ff'); cielo.addColorStop(1, '#fff3f8');
+        const cielo = ctx.createLinearGradient(0, 0, 0, suelo); cielo.addColorStop(0, '#9fd6ff'); cielo.addColorStop(1, '#fff1f7');
         ctx.fillStyle = cielo; ctx.fillRect(0, 0, W, H);
-        s.estrellas.forEach((e) => {
-          const a = Math.acos(1 - e.n / 100);
-          [-1, 1].forEach((l) => {
-            const x = px + Math.sin(a * l) * (L + 26), y = py + Math.cos(a) * (L + 26);
-            ctx.save(); ctx.translate(x, y); ctx.fillStyle = e.ok ? C.amarillo : '#fff'; ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5;
-            ctx.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 7 : 16, b = (i / 10) * Math.PI * 2 - Math.PI / 2; ctx.lineTo(Math.cos(b) * r, Math.sin(b) * r); } ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
-          });
+        // nubes con paralaje
+        for (let i = 0; i < 6; i++) { const x = ((i * 190 - s.cam * ESC * .3) % (W + 200) + W + 200) % (W + 200) - 100; caja(ctx, x, 40 + (i % 3) * 50, 90, 26, '#fff', 2); }
+        // piso del patio
+        ctx.fillStyle = '#ffd4e7'; ctx.fillRect(0, suelo, W, H - suelo);
+        ctx.strokeStyle = C.ink; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, suelo); ctx.lineTo(W, suelo); ctx.stroke();
+        // marcas de distancia
+        for (let m = 5; m < 80; m += 5) {
+          const [x] = aPant(m, 0); if (x < -40 || x > W + 40) continue;
+          caja(ctx, x - 2, suelo, 4, 12, C.ink, 0); texto(ctx, `${m} m`, x, suelo + 24, { tam: 11 });
+        }
+        // tapete objetivo
+        const tp = s.tapete;
+        [...tp.anillos].reverse().forEach(([r, , c]) => { const [x1] = aPant(tp.c - r / 2, 0), [x2] = aPant(tp.c + r / 2, 0); caja(ctx, x1, suelo - 6, x2 - x1, 10, c, 2.5); });
+        texto(ctx, '50', aPant(tp.c, 0)[0], suelo - 16, { tam: 11, peso: 900 });
+        // globos
+        s.globos.forEach((g) => {
+          const [x, y] = aPant(g.x, g.y); if (x < -40 || x > W + 40) return;
+          if (g.tomado) { ctx.globalAlpha = Math.max(0, 1 - (g.tomado - 1)); circulo(ctx, x, y, 16 + g.tomado * 10, null, 2); ctx.globalAlpha = 1; return; }
+          const b = Math.sin(s.t * 2 + g.x) * 4;
+          ctx.strokeStyle = C.ink; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y + 18 + b); ctx.lineTo(x, y + 44 + b); ctx.stroke();
+          ctx.beginPath(); ctx.ellipse(x, y + b, 14, 18, 0, 0, Math.PI * 2); ctx.fillStyle = g.c; ctx.fill(); ctx.lineWidth = 2.5; ctx.stroke();
+          circulo(ctx, x - 5, y - 6 + b, 3, '#fff', 0);
         });
-        ctx.fillStyle = '#ffd4e7'; ctx.fillRect(0, H * .88, W, H * .12);
-        caja(ctx, px - marco, py - 10, marco * 2, 14, C.azul, 3);
-        caja(ctx, px - marco, py - 10, 14, H * .88 - py + 10, C.azul, 3); caja(ctx, px + marco - 14, py - 10, 14, H * .88 - py + 10, C.azul, 3);
-        circulo(ctx, px, py + L, 30, null, 0);
-        ctx.strokeStyle = Math.abs(s.th) < .3 ? C.verde : 'rgba(0,0,0,.15)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(px, py + L, 36, 0, Math.PI * 2); ctx.stroke();
-        ctx.save(); ctx.translate(px, py); ctx.rotate(-s.th);
-        ctx.strokeStyle = C.ink; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-18, 0); ctx.lineTo(-18, L); ctx.moveTo(18, 0); ctx.lineTo(18, L); ctx.stroke();
-        caja(ctx, -28, L - 4, 56, 10, C.rosa, 3);
-        caja(ctx, -12, L - 44, 24, 40, C.amarillo, 3);
-        circulo(ctx, 0, L - 56, 12, '#ffd8b0', 3);
-        ctx.restore();
-        caja(ctx, 16, 16, 110, 50, '#fff', 3, 3);
-        texto(ctx, 'ALTURA', 71, 30, { tam: 10 }); texto(ctx, `${s.max}%`, 71, 52, { tam: 20 });
+        // estructura del columpio
+        const [px, py] = aPant(0, ph);
+        const piernas = Math.min(W * .16, 90);
+        ctx.lineWidth = 10; ctx.strokeStyle = C.azul; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(px - piernas, suelo); ctx.lineTo(px, py); ctx.lineTo(px + piernas, suelo); ctx.stroke();
+        ctx.lineCap = 'butt'; ctx.lineWidth = 3; ctx.strokeStyle = C.ink; ctx.beginPath(); ctx.moveTo(px - piernas, suelo); ctx.lineTo(px, py); ctx.lineTo(px + piernas, suelo); ctx.stroke();
+        caja(ctx, px - 14, py - 8, 28, 14, C.amarillo, 3);
+        const ax = px + Math.sin(s.th) * Lm * ESC, ay = py + Math.cos(s.th) * Lm * ESC;
+        ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(ax, ay); ctx.stroke();
+        ctx.save(); ctx.translate(ax, ay); ctx.rotate(-s.th); caja(ctx, -20, -4, 40, 9, C.rosa, 2.5); ctx.restore();
+        // aro de impulso
+        if (s.fase === 'impulso') {
+          const [bx, by] = aPant(0, ph - Lm);
+          ctx.lineWidth = 6; ctx.strokeStyle = Math.abs(s.th) < .3 ? C.verde : 'rgba(0,0,0,.12)';
+          ctx.beginPath(); ctx.arc(bx, by, 30, 0, Math.PI * 2); ctx.stroke();
+        }
+        // niño
+        const dibujaNino = (x, y, rot) => {
+          ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+          caja(ctx, -10, -30, 20, 26, C.amarillo, 2.5);
+          circulo(ctx, 0, -40, 10, '#ffd8b0', 2.5);
+          caja(ctx, -8, -4, 7, 16, C.azul, 2); caja(ctx, 1, -4, 7, 16, C.azul, 2);
+          caja(ctx, -20, -28, 10, 6, C.amarillo, 2); caja(ctx, 10, -28, 10, 6, C.amarillo, 2);
+          ctx.restore();
+        };
+        if (s.fase === 'impulso') dibujaNino(ax, ay - 2, -s.th);
+        else if (s.nino) {
+          s.nino.estela.forEach(([x, y], i) => { const [sx, sy] = aPant(x, y); ctx.globalAlpha = i / 30; circulo(ctx, sx, sy - 20, 4, C.rosa, 0); });
+          ctx.globalAlpha = 1;
+          const [nx, ny] = aPant(s.nino.x, s.nino.y);
+          dibujaNino(nx, ny, s.fase === 'vuelo' ? s.nino.rot : 0);
+        }
+        // altura e intento
+        caja(ctx, 14, 14, 116, 54, '#fff', 3, 3);
+        texto(ctx, `INTENTO ${Math.min(3, s.intento)}/3`, 72, 30, { tam: 10 });
+        texto(ctx, s.fase === 'impulso' ? `${Math.round(s.maxTh * 57)}°` : s.nino ? `${s.nino.x.toFixed(1)} m` : '', 72, 52, { tam: 20, peso: 900 });
+        if (puedeSoltar()) {
+          const b = boton();
+          caja(ctx, b.x, b.y, b.w, b.h, C.naranja, 3, 4);
+          texto(ctx, '¡SUÉLTATE! ↑', b.x + b.w / 2, b.y + b.h / 2, { tam: 18, peso: 900 });
+        } else if (s.fase === 'impulso') texto(ctx, 'TOCA EN EL ARO VERDE PARA IMPULSARTE', W / 2, H * .9, { tam: 12 });
         s.fx.dibujar(ctx);
       };
       return s;
@@ -718,7 +866,7 @@ export const JUEGOS = {
    Marco común: pantalla de inicio, tiempo, puntaje y resultado
    ====================================================================== */
 const CSS = `
-.mj-capa{position:fixed;inset:0;z-index:50;background:#fff;display:flex;flex-direction:column;font-family:Montserrat,system-ui,sans-serif;color:#141414;-webkit-user-select:none;user-select:none}
+.mj-capa{position:fixed;inset:0;z-index:50;-webkit-touch-callout:none;-webkit-user-select:none;touch-action:none;background:#fff;display:flex;flex-direction:column;font-family:Montserrat,system-ui,sans-serif;color:#141414;-webkit-user-select:none;user-select:none}
 .mj-cabeza{display:flex;align-items:stretch;border-bottom:2px solid #141414;min-height:56px;padding-top:env(safe-area-inset-top)}
 .mj-cabeza .mj-titulo{flex:1;display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--acc);color:var(--t);font-weight:900;font-size:16px;text-transform:uppercase;letter-spacing:.03em}
 .mj-cabeza .mj-dato{display:flex;flex-direction:column;justify-content:center;padding:6px 14px;border-left:2px solid #141414;min-width:74px}
@@ -845,7 +993,7 @@ export function abrirMinijuego(id, { zona = null, alTerminar = () => {}, mejor =
     if (!jugando || !ini) return;
     const [x, y] = pos(e);
     const dx = x - ini.x, dy = y - ini.y, dt = (performance.now() - ini.t) / 1000;
-    if (Math.hypot(dx, dy) > 25 && juego.desliz) juego.desliz(dx, dy, dt);
+    if (Math.hypot(dx, dy) > 25) { if (juego.desliz) juego.desliz(dx, dy, dt); } else if (juego.toque) juego.toque(x, y);
     ini = null;
   });
 

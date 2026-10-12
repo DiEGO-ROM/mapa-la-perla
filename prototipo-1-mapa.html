@@ -78,7 +78,7 @@
   .hoja {
     position: fixed; z-index: 6; left: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); width: min(400px, calc(100vw - 88px));
     background: #fff; border: var(--borde); box-shadow: 6px 6px 0 var(--ink);
-    transform: translateY(calc(100% + 40px)); transition: transform .3s cubic-bezier(.2, .9, .3, 1); max-height: calc(100dvh - 140px); overflow: auto;
+    transform: translateY(calc(100% + 40px)); transition: transform .3s cubic-bezier(.2, .9, .3, 1); max-height: calc(100vh - 140px); max-height: calc(100dvh - 140px); overflow: auto;
   }
   .hoja.on { transform: none; }
   .hoja .cerrar { position: absolute; top: 0; right: 0; width: 42px; height: 42px; border: 0; border-left: var(--borde); border-bottom: var(--borde); background: #fff; font-size: 22px; font-weight: 700; z-index: 1; }
@@ -107,7 +107,7 @@
   /* ---------- Paneles (directorio, pasaporte) ---------- */
   .panel { position: fixed; inset: 0; z-index: 8; background: rgba(255, 255, 255, .6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 16px; }
   .panel[hidden] { display: none; }
-  .tarjeta { background: #fff; border: var(--borde); box-shadow: 8px 8px 0 var(--ink); width: min(560px, 100%); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; animation: entra .3s ease-out; }
+  .tarjeta { background: #fff; border: var(--borde); box-shadow: 8px 8px 0 var(--ink); width: min(560px, 100%); max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; animation: entra .3s ease-out; }
   @keyframes entra { from { opacity: 0; transform: translateY(10px); } }
   .tarjeta-cab { display: flex; align-items: stretch; border-bottom: var(--borde); }
   .tarjeta-cab div { flex: 1; padding: 14px 16px; background: var(--c); color: var(--t); }
@@ -222,8 +222,12 @@
 <div class="toast" id="toast" role="status"></div>
 <div class="cargando" id="cargando"><div><div class="cuadros"><i style="background:var(--naranja)"></i><i style="background:var(--verde)"></i><i style="background:var(--rosa)"></i><i style="background:var(--azul)"></i></div>Construyendo La Perla…</div></div>
 
+<script async src="https://cdn.jsdelivr.net/npm/es-module-shims@1.10.0/dist/es-module-shims.js"></script>
 <script type="importmap">
-  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+  { "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  } }
 </script>
 <script src="datos-zonas.js"></script>
 <script type="module">
@@ -252,6 +256,13 @@ renderer.toneMappingExposure = 1.05;
 
 const plaza = crearPlaza(D, { modo: 'iso', movil });
 const scene = plaza.scene;
+window.__perla = { renderer, scene };
+// iOS/Safari: evita el zoom de página con gestos y recupera la escena si el sistema libera la GPU
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+document.addEventListener('dblclick', (e) => e.preventDefault());
+canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); });
+canvas.addEventListener('webglcontextrestored', () => location.reload());
+
 scene.background = new THREE.Color('#ffffff');
 
 const VISTA = 70;
@@ -454,10 +465,19 @@ function tocar(cx, cy) {
 /* ======================= Selección y ficha ======================= */
 const hoja = $('hoja');
 let mallaSel = null;
+// La tienda elegida se muestra como copia a color, un poco más grande, que brinca sobre el edificio
 function resaltar(t) {
-  if (mallaSel) { mallaSel.position.y = mallaSel.userData.yBase; if (mallaSel.userData.bordes) mallaSel.userData.bordes.position.y = mallaSel.userData.yBase; }
+  if (mallaSel) { mallaSel.visible = false; mallaSel.position.set(0, mallaSel.userData.yBase, 0); mallaSel.scale.set(1, 1, 1); }
   mallaSel = t ? plaza.tiendasMallas.find((m) => m.userData.tienda === t) : null;
-  if (mallaSel) { mallaSel.userData.yBase ??= mallaSel.position.y; mallaSel.userData.salto = 0; }
+  if (!mallaSel) return;
+  if (mallaSel.userData.yBase === undefined) mallaSel.userData.yBase = mallaSel.position.y;
+  const c = mallaSel.userData.tienda.centro, k = 1.05;
+  mallaSel.scale.set(k, 1, k);
+  mallaSel.position.x = X(c[0]) * (1 - k); mallaSel.position.z = Z(c[1]) * (1 - k);
+  mallaSel.material = mallaSel.userData.mats;
+  if (!mallaSel.userData.contorno) { mallaSel.userData.contorno = new THREE.LineSegments(new THREE.EdgesGeometry(mallaSel.geometry, 35), new THREE.LineBasicMaterial({ color: '#141414' })); mallaSel.add(mallaSel.userData.contorno); }
+  mallaSel.userData.salto = 0;
+  mallaSel.visible = true;
 }
 function volarA(px, py, n, zoomMin = 1.6) {
   destino.objetivo.set(X(px), n * MUNDO.ALTO_NIVEL * .6, Z(py));
@@ -659,7 +679,7 @@ function cuadro() {
   if (mallaSel) {
     mallaSel.userData.salto += dt;
     const y = mallaSel.userData.yBase + 1.2 + Math.sin(mallaSel.userData.salto * 5) * .25;
-    mallaSel.position.y = y; if (mallaSel.userData.bordes) mallaSel.userData.bordes.position.y = y;
+    mallaSel.position.y = y;
   }
   if (reto.activo && !reto.bloqueado) {
     const s = (performance.now() - reto.t0) / 1000;

@@ -84,7 +84,7 @@
 
   .overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, .55); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); z-index: 10; padding: 16px; }
   .overlay[hidden] { display: none; }
-  .tarjeta { background: #fff; border: var(--borde); box-shadow: 8px 8px 0 var(--ink); width: min(540px, 100%); max-height: calc(100dvh - 32px); overflow: auto; animation: entra .35s ease-out; -webkit-user-select: text; user-select: text; }
+  .tarjeta { background: #fff; border: var(--borde); box-shadow: 8px 8px 0 var(--ink); width: min(540px, 100%); max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow: auto; animation: entra .35s ease-out; -webkit-user-select: text; user-select: text; }
   .tarjeta.ancha { width: min(1000px, 100%); }
   .tarjeta .dentro { padding: 24px; }
   .cuadros-top { display: grid; grid-template-columns: repeat(6, 1fr); height: 36px; border-bottom: var(--borde); }
@@ -207,8 +207,12 @@
   </div>
 </div>
 
+<script async src="https://cdn.jsdelivr.net/npm/es-module-shims@1.10.0/dist/es-module-shims.js"></script>
 <script type="importmap">
-  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+  { "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  } }
 </script>
 <script src="datos-zonas.js"></script>
 <script>
@@ -246,6 +250,13 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
 const plaza = crearPlaza(D, { modo: 'fps', movil: tactil });
 const scene = plaza.scene;
+window.__perla = { renderer, scene };
+// iOS/Safari: evita el zoom de página con gestos y recupera la escena si el sistema libera la GPU
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+document.addEventListener('dblclick', (e) => e.preventDefault());
+canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); });
+canvas.addEventListener('webglcontextrestored', () => location.reload());
+
 plaza.niveles.forEach((g) => { g.visible = true; });
 scene.fog = new THREE.Fog('#e9f2ff', 70, 320);
 const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 900);

@@ -388,7 +388,6 @@
   for (let y = 20; y <= 1050; y += 55) arboles.push([1188, y]);
   for (let y = 260; y <= 700; y += 48) { arboles.push([137, y]); arboles.push([241, y]); }
   [[60, 175], [110, 230], [300, 175], [380, 230], [80, 845], [200, 845], [330, 800], [400, 845]].forEach((p) => arboles.push(p));
-  for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; arboles.push([862 + Math.cos(a) * 92, 514 + Math.sin(a) * 92]); }
 
   // Acertijos para "¿Dónde está?"
   const acertijos = [
