@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>La Perla · Prototipos de mapa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root { --ink: #141414; --naranja: #ff6b2c; --verde: #1fb36b; --rosa: #ff5fa2; --azul: #3d6bff; --amarillo: #ffc31f; --morado: #a259ff; --borde: 2px solid var(--ink); }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--ink); font-family: 'Montserrat', system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+    background-color: #fff;
+    background-image: linear-gradient(#efefef 1px, transparent 1px), linear-gradient(90deg, #efefef 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .franja { display: grid; grid-template-columns: repeat(6, 1fr); height: 18px; border-bottom: var(--borde); }
+  .franja i:nth-child(1) { background: var(--naranja); } .franja i:nth-child(2) { background: var(--verde); } .franja i:nth-child(3) { background: var(--rosa); }
+  .franja i:nth-child(4) { background: var(--azul); } .franja i:nth-child(5) { background: var(--amarillo); } .franja i:nth-child(6) { background: var(--morado); }
+  .franja i + i { border-left: var(--borde); }
+  main { max-width: 1080px; margin: 0 auto; padding: 48px 24px 64px; }
+  .wordmark { display: inline-block; background: var(--ink); color: #fff; font-weight: 900; letter-spacing: .22em; font-size: 16px; padding: 10px 14px; }
+  .wordmark sup { font-size: 8px; letter-spacing: 0; }
+  h1 { font-size: clamp(40px, 8vw, 84px); line-height: .95; margin: 28px 0 18px; font-weight: 900; letter-spacing: -.03em; }
+  h1 span { background: var(--amarillo); padding: 0 .12em; border: var(--borde); display: inline-block; margin-top: 6px; }
+  .intro { font-size: 17px; line-height: 1.6; max-width: 640px; margin: 0 0 40px; font-weight: 500; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 28px; }
+  a.card { display: block; text-decoration: none; color: inherit; background: #fff; border: var(--borde); box-shadow: 8px 8px 0 var(--ink); transition: transform .12s, box-shadow .12s; }
+  a.card:hover { transform: translate(-3px, -3px); box-shadow: 11px 11px 0 var(--ink); }
+  a.card:active { transform: translate(6px, 6px); box-shadow: 2px 2px 0 var(--ink); }
+  .cabeza { background: var(--c); color: var(--t, var(--ink)); padding: 22px 24px; border-bottom: var(--borde); display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+  .num { font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+  .cabeza h2 { font-size: 30px; margin: 8px 0 0; font-weight: 900; line-height: 1.05; }
+  .grande { font-size: 64px; font-weight: 900; line-height: .8; }
+  .cuerpo { padding: 22px 24px 24px; }
+  .cuerpo p { font-size: 15px; line-height: 1.6; margin: 0 0 16px; font-weight: 500; }
+  .cuerpo ul { margin: 0 0 22px; padding: 0; list-style: none; border: var(--borde); }
+  .cuerpo li { font-size: 13px; font-weight: 700; padding: 10px 12px; display: flex; gap: 10px; align-items: center; }
+  .cuerpo li + li { border-top: var(--borde); }
+  .cuerpo li i { width: 12px; height: 12px; border: 1.5px solid var(--ink); background: var(--c); flex: none; }
+  .ir { display: inline-flex; padding: 13px 20px; border: var(--borde); background: var(--c); color: var(--t, var(--ink)); font-weight: 900; font-size: 14px; text-transform: uppercase; letter-spacing: .05em; box-shadow: 4px 4px 0 var(--ink); }
+  .nota { font-size: 12px; margin-top: 40px; line-height: 1.6; font-weight: 500; color: #5c5c5c; max-width: 720px; }
+</style>
+</head>
+<body>
+<div class="franja" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+<main>
+  <span class="wordmark">LA PERLA<sup>®</sup></span>
+  <h1>Mapa interactivo<br><span>dos prototipos</span></h1>
+  <p class="intro">Dos maneras de conocer la plaza desde la página web. Ambos usan los mismos datos de zonas, así que cualquier cambio de textos, horarios o posiciones se hace en un solo archivo.</p>
+  <div class="grid">
+    <a class="card" href="prototipo-1-mapa.html" style="--c:var(--naranja)">
+      <div class="cabeza"><div><span class="num">Prototipo 1 · Vista aérea</span><h2>Mapa con juegos</h2></div><span class="grande">01</span></div>
+      <div class="cuerpo">
+        <p>La plaza vista desde arriba, con fichas de cada área y tres formas de jugar.</p>
+        <ul>
+          <li><i style="--c:var(--naranja)"></i>Explorar con filtros y pasaporte de sellos</li>
+          <li><i style="--c:var(--azul)"></i>¿Dónde está? · reto de pistas con puntaje</li>
+          <li><i style="--c:var(--rosa)"></i>Caza de perlas · de noche, con linterna</li>
+        </ul>
+        <span class="ir">Abrir mapa →</span>
+      </div>
+    </a>
+    <a class="card" href="prototipo-2-recorrido.html" style="--c:var(--verde)">
+      <div class="cabeza"><div><span class="num">Prototipo 2 · Primera persona</span><h2>Recorrido 3D</h2></div><span class="grande">02</span></div>
+      <div class="cuerpo">
+        <p>Camina la plaza a escala reducida y más rápido que a pie, recolectando una perla por área.</p>
+        <ul>
+          <li><i style="--c:var(--verde)"></i>Escala 1:2 · unas 12 veces más rápido que a pie</li>
+          <li><i style="--c:var(--amarillo)"></i>Comparativa en vivo de tiempo y distancia reales</li>
+          <li><i style="--c:var(--morado)"></i>Minimapa, viaje rápido y modo «Ciudad de luces»</li>
+        </ul>
+        <span class="ir">Empezar recorrido →</span>
+      </div>
+    </a>
+  </div>
+  <p class="nota">Distribución de las zonas ilustrativa: se ajusta con el plano oficial. Textos, m², horarios y reglas tomados de laperla.com.mx. El recorrido 3D necesita conexión a internet para cargar su motor gráfico.</p>
+</main>
+</body>
+</html>

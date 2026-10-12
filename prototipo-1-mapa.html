@@ -1,0 +1,910 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>La Perla · Mapa interactivo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --ink: #141414;
+    --gris: #f4f4f2;
+    --muted: #5c5c5c;
+    --naranja: #ff6b2c;
+    --verde: #1fb36b;
+    --rosa: #ff5fa2;
+    --azul: #3d6bff;
+    --amarillo: #ffc31f;
+    --morado: #a259ff;
+    --rojo: #ff3b3b;
+    --borde: 2px solid var(--ink);
+    --sombra: 5px 5px 0 var(--ink);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background-color: var(--bg);
+    background-image: linear-gradient(#efefef 1px, transparent 1px), linear-gradient(90deg, #efefef 1px, transparent 1px);
+    background-size: 24px 24px;
+    color: var(--ink);
+    font-family: 'Montserrat', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+
+  /* ---------- Encabezado ---------- */
+  .top {
+    display: grid; grid-template-columns: auto 1fr auto; align-items: stretch;
+    border-bottom: var(--borde); background: #fff;
+  }
+  .marca { background: var(--ink); color: #fff; padding: 16px 22px; display: flex; flex-direction: column; justify-content: center; }
+  .wordmark { font-weight: 900; letter-spacing: .22em; font-size: 19px; line-height: 1; }
+  .wordmark sup { font-size: 9px; letter-spacing: 0; }
+  .tag { font-size: 11px; font-weight: 600; margin-top: 6px; opacity: .75; letter-spacing: .04em; }
+  .franja { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .franja i { display: block; border-left: var(--borde); }
+  .modos { display: grid; grid-template-columns: repeat(3, auto); border-left: var(--borde); }
+  .modos button {
+    border: 0; border-right: var(--borde); background: #fff; padding: 0 22px; font-weight: 800; font-size: 14px;
+    text-transform: uppercase; letter-spacing: .04em; display: flex; align-items: center; gap: 10px; min-height: 64px;
+  }
+  .modos button:last-child { border-right: 0; }
+  .modos button .sq { width: 14px; height: 14px; border: var(--borde); background: var(--c); }
+  .modos button[aria-selected="true"] { background: var(--c); color: var(--t, var(--ink)); }
+  .modos button[aria-selected="true"] .sq { background: #fff; }
+
+  /* ---------- Distribución ---------- */
+  .layout {
+    display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px;
+    padding: 24px; max-width: 1440px; margin: 0 auto; align-items: start;
+  }
+  .mapa-area { min-width: 0; }
+  .filtros { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .filtros[hidden] { display: none; }
+  .chip {
+    border: var(--borde); background: #fff; padding: 7px 12px 7px 10px; font-size: 12px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .03em; display: inline-flex; align-items: center; gap: 8px;
+    transition: transform .12s, box-shadow .12s;
+  }
+  .chip i { width: 12px; height: 12px; background: var(--c); border: 1.5px solid var(--ink); }
+  .chip:hover { transform: translate(-2px, -2px); box-shadow: 2px 2px 0 var(--ink); }
+  .chip.on { background: var(--c); color: var(--t, var(--ink)); }
+  .chip.on i { background: #fff; }
+  .mapa-marco { position: relative; border: var(--borde); box-shadow: var(--sombra); background: #fff; }
+  .mapa-cabeza { display: flex; justify-content: space-between; align-items: center; border-bottom: var(--borde); padding: 8px 12px; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+  .mapa-cabeza .leyenda { display: flex; gap: 12px; flex-wrap: wrap; }
+  .mapa-cabeza .leyenda span { display: inline-flex; align-items: center; gap: 5px; }
+  .mapa-cabeza .leyenda i { width: 10px; height: 10px; border: 1.5px solid var(--ink); background: var(--c); }
+  .mapa-scroll { overflow: auto; -webkit-overflow-scrolling: touch; }
+  #mapa { display: block; width: 100%; height: auto; user-select: none; -webkit-user-select: none; }
+  .desliza { display: none; }
+  .pista-mapa { display: none; }
+  .nota { color: var(--muted); font-size: 12px; margin: 14px 2px 0; font-weight: 500; }
+
+  /* ---------- Mapa: zonas ---------- */
+  .zona { cursor: pointer; outline: none; transition: opacity .3s; }
+  .zona .forma { transition: stroke-width .15s; }
+  .zona.hov .forma { stroke-width: 1.1; }
+  .zona.sel .forma { stroke-width: 1.5; }
+  .pin-in { transition: transform .25s cubic-bezier(.3, 1.6, .5, 1); transform-box: fill-box; transform-origin: center; }
+  .zona.hov .pin-in, .zona.sel .pin-in { transform: scale(1.2); }
+  .pin-aro { fill: none; stroke: var(--ink); stroke-width: .5; opacity: 0; transform-box: fill-box; transform-origin: center; }
+  .zona.sel .pin-aro { animation: aro 1.4s ease-out infinite; }
+  @keyframes aro { from { transform: scale(1); opacity: .9; } to { transform: scale(2.2); opacity: 0; } }
+  .etq { font-size: 3.2px; font-weight: 800; fill: var(--ink); paint-order: stroke; stroke: #fff; stroke-width: 1.2px; stroke-linejoin: round; pointer-events: none; letter-spacing: .02em; }
+  .etq.sub { font-size: 2.2px; font-weight: 800; }
+  svg.filtrando .zona:not(.match) { opacity: .2; }
+  .zona.ok .forma { stroke: var(--verde); stroke-width: 2; }
+  .zona.mal .forma { stroke: var(--rojo); stroke-width: 2; }
+  .zona.mal { animation: sacudir .4s; }
+  .zona.revela .forma { stroke: var(--verde); stroke-width: 1.8; stroke-dasharray: 2 1.4; animation: hormiga 1s linear infinite; }
+  @keyframes sacudir { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-1px); } 75% { transform: translateX(1px); } }
+  @keyframes hormiga { to { stroke-dashoffset: -6.8; } }
+
+  #noche, #focos-noche, #pistas { display: none; }
+  svg.modo-noche #noche, svg.modo-noche #focos-noche, svg.modo-noche #pistas { display: inline; }
+  svg.modo-noche .zona { cursor: crosshair; }
+  .perla { display: none; cursor: pointer; }
+  svg.modo-noche .perla { display: inline; }
+  .perla.tomada { pointer-events: none; animation: tomar .7s ease-out forwards; transform-box: fill-box; transform-origin: center; }
+  @keyframes tomar { to { transform: scale(3); opacity: 0; } }
+  .pista-aro { fill: none; stroke: var(--amarillo); stroke-width: .7; stroke-dasharray: 1.5 1.2; animation: pista 2.2s ease-out forwards; }
+  @keyframes pista { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
+  .bulbo-titila { animation: titila 2.6s ease-in-out infinite; }
+  @keyframes titila { 50% { opacity: .5; } }
+
+  /* ---------- Panel ---------- */
+  .panel { background: #fff; border: var(--borde); box-shadow: var(--sombra); position: sticky; top: 16px; }
+  .panel-cuerpo { padding: 22px; }
+  .eyebrow { margin: 0 0 8px; text-transform: uppercase; letter-spacing: .12em; font-size: 11px; font-weight: 800; }
+  .panel h2 { margin: 0 0 12px; font-size: 26px; line-height: 1.1; font-weight: 900; letter-spacing: -.01em; }
+  .panel h3 { margin: 0; font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+  .panel p { line-height: 1.55; font-size: 14px; margin: 0 0 14px; font-weight: 500; }
+  .muted { color: var(--muted) !important; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    border: var(--borde); padding: 12px 18px; font-weight: 800; font-size: 14px; text-transform: uppercase; letter-spacing: .04em;
+    background: var(--c, var(--amarillo)); color: var(--t, var(--ink)); box-shadow: 3px 3px 0 var(--ink); transition: transform .1s, box-shadow .1s;
+  }
+  .btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+  .btn:active { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--ink); }
+  .btn.sec { background: #fff; color: var(--ink); }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+
+  .bloque-color { background: var(--c); color: var(--t); padding: 18px 22px; border-bottom: var(--borde); display: flex; gap: 14px; align-items: center; }
+  .bloque-color .eyebrow { margin-bottom: 4px; }
+  .bloque-color h2 { margin: 0; }
+  .ico { flex: none; width: 52px; height: 52px; display: grid; place-items: center; background: #fff; color: var(--ink); border: var(--borde); }
+  .ico svg { width: 28px; height: 28px; }
+  .ficha { animation: entra .3s ease-out; }
+  @keyframes entra { from { opacity: 0; transform: translateY(6px); } }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; margin: 0 0 16px; border: var(--borde); }
+  .stats div { padding: 10px 12px; }
+  .stats div + div { border-left: var(--borde); }
+  .stats div:only-child { grid-column: 1 / -1; }
+  .stats dt { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; font-weight: 800; color: var(--muted); }
+  .stats dd { margin: 4px 0 0; font-weight: 800; font-size: 14px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 0; list-style: none; }
+  .chips li { font-size: 12px; font-weight: 700; padding: 6px 10px; border: 1.5px solid var(--ink); background: var(--gris); }
+  .sello-ok { margin-top: 16px; display: flex; gap: 10px; align-items: center; font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; }
+  .sello-ok i { width: 22px; height: 22px; background: var(--c); border: var(--borde); display: grid; place-items: center; font-style: normal; color: var(--t); font-size: 13px; }
+
+  .pasaporte { border-top: var(--borde); padding: 18px 22px 22px; background: var(--gris); }
+  .pasaporte-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+  .pasaporte-head span { font-weight: 900; font-size: 18px; }
+  .sellos { display: grid; grid-template-columns: repeat(5, 1fr); border-top: var(--borde); border-left: var(--borde); }
+  .sello {
+    aspect-ratio: 1; display: grid; place-items: center; border: 0; border-right: var(--borde); border-bottom: var(--borde);
+    background: #fff; color: #c4c4c0; padding: 0;
+  }
+  .sello svg { width: 50%; height: 50%; }
+  .sello.on { background: var(--c); color: var(--t); }
+  .sello.nuevo svg { animation: estampar .5s cubic-bezier(.2, 1.8, .4, 1); }
+  @keyframes estampar { 0% { transform: scale(2.4) rotate(12deg); opacity: 0; } 100% { transform: none; opacity: 1; } }
+  .barra { height: 14px; border: var(--borde); background: #fff; margin-top: 14px; }
+  .barra i { display: block; height: 100%; background: repeating-linear-gradient(90deg, var(--naranja) 0 20%, var(--verde) 20% 40%, var(--rosa) 40% 60%, var(--azul) 60% 80%, var(--amarillo) 80% 100%); background-size: 200px 100%; transition: width .5s; }
+  .link { background: none; border: 0; padding: 0; font-size: 12px; font-weight: 700; text-decoration: underline; margin-top: 12px; color: var(--muted); }
+
+  /* Reto */
+  .marcador { display: grid; grid-template-columns: 1fr 1fr; border-bottom: var(--borde); }
+  .marcador div { padding: 12px 18px; }
+  .marcador div + div { border-left: var(--borde); text-align: right; background: var(--amarillo); }
+  .marcador b { font-size: 22px; font-weight: 900; display: block; }
+  .mini-lbl { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+  .pista-box { background: var(--azul); color: #fff; padding: 22px; border-bottom: var(--borde); }
+  .pista-box .eyebrow { color: #fff; }
+  .pista-box p { font-size: 20px; font-weight: 800; line-height: 1.3; color: #fff; margin: 0; }
+  .tiempo { height: 12px; border-bottom: var(--borde); background: #fff; }
+  .tiempo i { display: block; height: 100%; width: 100%; background: var(--naranja); }
+  .resp { min-height: 64px; font-weight: 800; font-size: 16px; }
+  .resp.ok { color: #0f7a46; }
+  .resp.mal { color: #c4161c; }
+  .resp small { display: block; color: var(--muted); font-weight: 600; margin-top: 4px; font-size: 13px; }
+  .big-num { font-size: 64px; font-weight: 900; line-height: 1; margin: 4px 0 8px; letter-spacing: -.03em; }
+
+  /* Caza */
+  .contador { display: flex; align-items: stretch; border-bottom: var(--borde); }
+  .contador .num { background: var(--rosa); padding: 14px 20px; border-right: var(--borde); }
+  .contador .num b { font-size: 40px; font-weight: 900; line-height: 1; display: block; }
+  .contador .reloj { padding: 14px 20px; display: flex; flex-direction: column; justify-content: center; }
+  .contador .reloj b { font-size: 24px; font-weight: 900; }
+  .datos-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; max-height: 320px; overflow: auto; }
+  .datos-list li { border: 1.5px solid var(--ink); padding: 10px 12px; font-size: 13px; line-height: 1.45; font-weight: 600; background: #fff; animation: entra .3s ease-out; display: flex; gap: 10px; }
+  .datos-list li b { flex: none; width: 24px; height: 24px; background: var(--rosa); border: 1.5px solid var(--ink); display: grid; place-items: center; font-size: 12px; }
+
+  /* Toast y modal */
+  .toast {
+    position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); transform: translate(-50%, 30px); opacity: 0; pointer-events: none;
+    background: var(--ink); color: #fff; padding: 12px 18px; font-weight: 800; font-size: 14px; border: 2px solid var(--ink);
+    box-shadow: 4px 4px 0 var(--amarillo); transition: all .3s; z-index: 20; max-width: calc(100vw - 32px); text-align: center;
+  }
+  .toast.on { opacity: 1; transform: translate(-50%, 0); }
+  .modal { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(255, 255, 255, .7); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 30; padding: 16px; }
+  .modal[hidden] { display: none; }
+  .modal-card { background: #fff; border: var(--borde); box-shadow: 8px 8px 0 var(--ink); max-width: 420px; animation: entra .35s ease-out; }
+  .modal-card .cuadros { display: grid; grid-template-columns: repeat(6, 1fr); border-bottom: var(--borde); height: 48px; }
+  .modal-card .cuadros i:nth-child(1) { background: var(--naranja); } .modal-card .cuadros i:nth-child(2) { background: var(--verde); }
+  .modal-card .cuadros i:nth-child(3) { background: var(--rosa); } .modal-card .cuadros i:nth-child(4) { background: var(--azul); }
+  .modal-card .cuadros i:nth-child(5) { background: var(--amarillo); } .modal-card .cuadros i:nth-child(6) { background: var(--morado); }
+  .modal-card .cuadros i + i { border-left: var(--borde); }
+  .modal-card .dentro { padding: 26px; }
+  .modal-card h2 { margin: 0 0 10px; font-size: 28px; font-weight: 900; }
+  .modal-card p { line-height: 1.55; font-size: 14px; font-weight: 500; }
+
+  @media (max-width: 1100px) {
+    .franja { display: none; }
+    .top { grid-template-columns: auto 1fr; }
+  }
+  @media (max-width: 960px) {
+    .layout { grid-template-columns: 1fr; padding: 16px; gap: 18px; }
+    .top { grid-template-columns: 1fr; }
+    .marca { flex-direction: row; align-items: baseline; justify-content: space-between; padding: 14px 16px; }
+    .tag { margin: 0; }
+    .modos { grid-template-columns: repeat(3, 1fr); border-left: 0; border-top: var(--borde); }
+    .modos button { padding: 0 8px; font-size: 11px; justify-content: center; min-height: 52px; gap: 6px; text-align: center; }
+    .modos button .sq { display: none; }
+    #mapa { min-width: 680px; }
+    .mapa-cabeza .leyenda { display: none; }
+    .desliza { display: inline; margin: 0 auto; }
+    .mapa-cabeza > span:first-child { display: none; }
+    .pista-mapa:not([hidden]) {
+      display: block; background: var(--azul); color: #fff; border-bottom: var(--borde);
+      padding: 10px 14px; font-weight: 800; font-size: 14px; line-height: 1.3;
+    }
+    .pista-mapa small { display: block; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; opacity: .85; margin-bottom: 2px; }
+    .panel { position: static; }
+    .filtros { flex-wrap: nowrap; overflow-x: auto; margin: 0 -16px 14px; padding: 2px 16px 6px; scrollbar-width: none; }
+    .filtros::-webkit-scrollbar { display: none; }
+    .chip { flex: none; }
+    .panel h2 { font-size: 22px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="marca">
+    <span class="wordmark">LA PERLA<sup>®</sup></span>
+    <span class="tag">Mapa interactivo · Prototipo 1</span>
+  </div>
+  <div class="franja" aria-hidden="true">
+    <i style="background:var(--naranja)"></i><i style="background:#fff"></i><i style="background:var(--verde)"></i><i style="background:var(--rosa)"></i><i style="background:#fff"></i><i style="background:var(--azul)"></i><i style="background:var(--amarillo)"></i>
+  </div>
+  <nav class="modos" role="tablist" aria-label="Modo del mapa">
+    <button role="tab" data-modo="explorar" aria-selected="true" style="--c:var(--naranja)"><span class="sq"></span>Explorar</button>
+    <button role="tab" data-modo="reto" aria-selected="false" style="--c:var(--azul);--t:#fff"><span class="sq"></span>¿Dónde está?</button>
+    <button role="tab" data-modo="caza" aria-selected="false" style="--c:var(--rosa)"><span class="sq"></span>Caza de perlas</button>
+  </nav>
+</header>
+
+<main class="layout">
+  <section class="mapa-area">
+    <div class="filtros" id="filtros" role="group" aria-label="Filtrar zonas"></div>
+    <div class="mapa-marco">
+      <div class="mapa-cabeza">
+        <span>Plano · La Perla, Zapopan</span>
+        <span class="desliza">← Desliza el mapa →</span>
+        <span class="leyenda"><span><i style="--c:var(--naranja)"></i>Comida</span><span><i style="--c:var(--verde)"></i>Naturaleza</span><span><i style="--c:var(--azul)"></i>Deporte</span><span><i style="--c:#f1f1ef"></i>Tiendas</span></span>
+      </div>
+      <div class="pista-mapa" id="pistaMapa" hidden></div>
+      <div class="mapa-scroll">
+        <svg id="mapa" viewBox="0 0 240 178" role="img" aria-label="Mapa de La Perla visto desde arriba"></svg>
+      </div>
+    </div>
+    <p class="nota">Distribución ilustrativa para el prototipo · los datos de cada zona vienen de laperla.com.mx · se ajusta con el plano oficial.</p>
+  </section>
+  <aside class="panel" id="panel" aria-live="polite"></aside>
+</main>
+
+<div class="toast" id="toast" role="status"></div>
+<div class="modal" id="modal" hidden><div class="modal-card" id="modalCard"></div></div>
+
+<script src="datos-zonas.js"></script>
+<script>
+(function () {
+  const D = window.LA_PERLA;
+  const NS = 'http://www.w3.org/2000/svg';
+  const INK = '#141414';
+  const svg = document.getElementById('mapa');
+  const panel = document.getElementById('panel');
+  const SELLABLES = D.zonas.filter((z) => z.sello);
+  const RADIO_LINTERNA = 19;
+  const SEG_RONDA = 15;
+
+  const guardado = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sin almacenamiento */ } },
+  };
+
+  const S = {
+    modo: 'explorar', sel: null, filtro: 'todo',
+    sellos: new Set(guardado.get('laperla-sellos', [])),
+    nuevoSello: null, reto: null, caza: null, luz: { x: 120, y: 80 },
+  };
+
+  function el(tag, attrs, parent) {
+    const n = document.createElementNS(NS, tag);
+    if (attrs) for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  const icono = (nombre) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${D.ICONOS[nombre]}"/></svg>`;
+  const barajar = (a) => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+  const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  const estiloZona = (z) => `--c:${z.acento};--t:${D.tinta(z.acento)}`;
+
+  /* ================= Dibujo del mapa ================= */
+  const defs = el('defs', null, svg);
+  defs.innerHTML = `
+    ${Object.entries(D.ICONOS).map(([k, d]) => `<symbol id="ic-${k}" viewBox="0 0 24 24"><path d="${d}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>`).join('')}
+    <pattern id="p-cuadricula" width="4" height="4" patternUnits="userSpaceOnUse">
+      <rect width="4" height="4" fill="#fbfbf9"/><path d="M4 0H0V4" fill="none" stroke="#ebebe7" stroke-width=".2"/>
+    </pattern>
+    <pattern id="p-adoquin" width="3" height="3" patternUnits="userSpaceOnUse">
+      <rect width="3" height="3" fill="#ffd9c6"/><path d="M3 0H0V3" fill="none" stroke="#ffbf9f" stroke-width=".22"/>
+    </pattern>
+    <pattern id="p-pasto" width="3" height="3" patternUnits="userSpaceOnUse">
+      <rect width="3" height="3" fill="#c8efd9"/><rect x=".6" y=".6" width=".6" height=".6" fill="#9fdfbc"/>
+    </pattern>
+    <pattern id="p-pasto2" width="3" height="3" patternUnits="userSpaceOnUse">
+      <rect width="3" height="3" fill="#e0f5d0"/><rect x="1.6" y="1.6" width=".6" height=".6" fill="#b9e69a"/>
+    </pattern>
+    <pattern id="p-rayas" width="2" height="2" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="2" height="2" fill="#fff0c2"/><rect width=".7" height="2" fill="#ffe28a"/>
+    </pattern>
+    <radialGradient id="g-perla" cx=".35" cy=".3" r=".75">
+      <stop offset="0" stop-color="#ffffff"/><stop offset=".35" stop-color="#fff4fa"/><stop offset=".75" stop-color="#ffc4de"/><stop offset="1" stop-color="#ff5fa2"/>
+    </radialGradient>
+    <radialGradient id="g-linterna"><stop offset="0" stop-color="#000"/><stop offset=".6" stop-color="#000"/><stop offset="1" stop-color="#fff"/></radialGradient>
+    <mask id="m-linterna" maskUnits="userSpaceOnUse" x="0" y="0" width="240" height="178">
+      <rect width="240" height="178" fill="#fff"/>
+      <circle id="linterna" cx="120" cy="80" r="${RADIO_LINTERNA}" fill="url(#g-linterna)"/>
+    </mask>
+    <filter id="f-brillo" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation=".7"/></filter>
+  `;
+
+  // Suelo del sitio y avenida
+  const base = el('g', null, svg);
+  el('rect', { x: 0, y: 0, width: 240, height: 178, fill: '#ffffff' }, base);
+  el('rect', { x: 2, y: 2, width: 236, height: 158, fill: 'url(#p-cuadricula)', stroke: INK, 'stroke-width': .5 }, base);
+  el('rect', { x: 0, y: 162, width: 240, height: 14, fill: INK }, base);
+  el('line', { x1: 0, y1: 169, x2: 240, y2: 169, stroke: '#ffc31f', 'stroke-width': .4, 'stroke-dasharray': '3 3' }, base);
+  [[58, 'AV. MARIANO OTERO'], [190, 'AV. MARIANO OTERO']].forEach(([x, t]) => {
+    el('text', { x, y: 166.4, 'text-anchor': 'middle', fill: '#ffffff', 'font-size': 2.3, 'font-weight': 800, 'letter-spacing': '.45' }, base).textContent = t;
+  });
+  const norte = el('g', { transform: 'translate(7 8)' }, base);
+  el('rect', { x: -3.4, y: -4.6, width: 6.8, height: 10.6, fill: '#fff', stroke: INK, 'stroke-width': .4 }, norte);
+  el('path', { d: 'M0 -3.4 L1.6 1.4 L0 .5 L-1.6 1.4 Z', fill: INK }, norte);
+  el('text', { x: 0, y: 5, 'text-anchor': 'middle', fill: INK, 'font-size': 2.4, 'font-weight': 900 }, norte).textContent = 'N';
+
+  const capaZonas = el('g', null, svg);
+  const capaArboles = el('g', { 'pointer-events': 'none' }, svg);
+  const capaLuces = el('g', { 'pointer-events': 'none' }, svg);
+  const capaPins = el('g', null, svg);
+  const capaPerlas = el('g', null, svg);
+  const capaNoche = el('g', { id: 'noche', 'pointer-events': 'none' }, svg);
+  const capaFocos = el('g', { id: 'focos-noche', 'pointer-events': 'none' }, svg);
+  const capaPistas = el('g', { id: 'pistas', 'pointer-events': 'none' }, svg);
+  const capaMarcas = el('g', { 'pointer-events': 'none' }, svg);
+
+  function forma(z, g, attrs) {
+    const f = z.forma;
+    let n;
+    if (f.tipo === 'rect') n = el('rect', { x: f.x, y: f.y, width: f.w, height: f.h }, g);
+    else if (f.tipo === 'circ') n = el('circle', { cx: f.cx, cy: f.cy, r: f.r }, g);
+    else n = el('polygon', { points: f.puntos.map((p) => p.join(',')).join(' ') }, g);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    return n;
+  }
+  function edificio(z, g, opts = {}) {
+    const f = z.forma;
+    el('rect', { x: f.x + 1.4, y: f.y + 1.4, width: f.w, height: f.h, fill: INK }, g);
+    forma(z, g, { class: 'forma', fill: opts.fill || z.plano, stroke: INK, 'stroke-width': .6 });
+    el('rect', { x: f.x + 2.6, y: f.y + 2.6, width: f.w - 5.2, height: f.h - 5.2, fill: 'none', stroke: '#c9c9c4', 'stroke-width': .3 }, g);
+    const n = Math.max(2, Math.round(f.w / 16));
+    for (let i = 0; i < n; i++) el('rect', { x: f.x + 5 + i * ((f.w - 14) / n), y: f.y + 5, width: 4, height: 2.6, fill: '#dcdcd6', stroke: INK, 'stroke-width': .2 }, g);
+  }
+  const deco = {
+    calzada(z, g) {
+      forma(z, g, { class: 'forma', fill: 'url(#p-adoquin)', stroke: INK, 'stroke-width': .6 });
+      D.puestos.forEach((p) => el('rect', { x: p.pos[0] - 1.5, y: p.pos[1] - 1.5, width: 3, height: 3, fill: p.color, stroke: INK, 'stroke-width': .3 }, g));
+      D.mesas.forEach(([x, y]) => el('circle', { cx: x, cy: y, r: 1.1, fill: '#fff', stroke: INK, 'stroke-width': .3 }, g));
+      el('path', { d: 'M118 158.6 L122 155.4 L126 158.6', fill: 'none', stroke: INK, 'stroke-width': .8, 'stroke-linecap': 'square' }, g);
+    },
+    jardin(z, g) {
+      forma(z, g, { class: 'forma', fill: 'url(#p-pasto)', stroke: INK, 'stroke-width': .6 });
+      el('rect', { x: 98, y: 86, width: 14, height: 4, fill: '#fff', stroke: INK, 'stroke-width': .25 }, g);
+      el('circle', { cx: 84, cy: 88, r: 13.25, fill: 'none', stroke: INK, 'stroke-width': 2.9 }, g);
+      el('circle', { cx: 84, cy: 88, r: 13.25, fill: 'none', stroke: '#fff', 'stroke-width': 2.4 }, g);
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2 + 0.5;
+        const cx = 84 + Math.cos(a) * 8.5, cy = 88 + Math.sin(a) * 8.5;
+        ['#ff5fa2', '#ffc31f', '#ff6b2c'].forEach((c, k) => el('rect', { x: cx + (k - 1) * 1 - .4, y: cy + (k % 2) * .8 - .4, width: .8, height: .8, fill: c }, g));
+      }
+      el('circle', { cx: 84, cy: 88, r: 4.6, fill: '#7fd0ff', stroke: INK, 'stroke-width': .4 }, g);
+      const ola = el('circle', { cx: 84, cy: 88, r: 1, fill: 'none', stroke: '#fff', 'stroke-width': .35 }, g);
+      el('animate', { attributeName: 'r', from: 1, to: 4.3, dur: '2.4s', repeatCount: 'indefinite' }, ola);
+      el('animate', { attributeName: 'opacity', from: 1, to: 0, dur: '2.4s', repeatCount: 'indefinite' }, ola);
+      el('circle', { cx: 84, cy: 88, r: .8, fill: '#fff', stroke: INK, 'stroke-width': .2 }, g);
+    },
+    canino(z, g) {
+      forma(z, g, { class: 'forma', fill: 'url(#p-pasto2)', stroke: INK, 'stroke-width': .6 });
+      el('polyline', { points: '51.2,94 51.2,82.8 12.8,82.8 12.8,111.2 51.2,111.2 51.2,100', fill: 'none', stroke: INK, 'stroke-width': .3, 'stroke-dasharray': '1 .7' }, g);
+      [[20, 89], [26, 89], [44, 104]].forEach(([x, y]) => el('rect', { x: x - 1.6, y: y - .3, width: 3.2, height: .6, fill: '#ff6b2c', stroke: INK, 'stroke-width': .15 }, g));
+      el('path', { d: 'M38 88 q4 -3 8 0', fill: 'none', stroke: '#a259ff', 'stroke-width': 1.3 }, g);
+      el('rect', { x: 16, y: 102, width: 4.2, height: 3.4, fill: '#c9864a', stroke: INK, 'stroke-width': .25 }, g);
+    },
+    rampas(z, g) {
+      forma(z, g, { class: 'forma', fill: 'url(#p-rayas)', stroke: INK, 'stroke-width': .6 });
+      el('rect', { x: 14.6, y: 124, width: 5, height: 24, fill: '#ffc31f', stroke: INK, 'stroke-width': .3 }, g);
+      el('rect', { x: 46.4, y: 124, width: 5, height: 24, fill: '#ffc31f', stroke: INK, 'stroke-width': .3 }, g);
+      el('line', { x1: 15.2, y1: 124, x2: 15.2, y2: 148, stroke: INK, 'stroke-width': .6 }, g);
+      el('line', { x1: 50.8, y1: 124, x2: 50.8, y2: 148, stroke: INK, 'stroke-width': .6 }, g);
+      el('path', { d: 'M27 141 h12 v6 h-12z', fill: '#ff6b2c', stroke: INK, 'stroke-width': .3 }, g);
+      el('line', { x1: 24, y1: 128, x2: 42, y2: 128, stroke: INK, 'stroke-width': .5 }, g);
+    },
+    cancha(z, g) {
+      forma(z, g, { class: 'forma', fill: '#d5dfff', stroke: INK, 'stroke-width': .6 });
+      el('rect', { x: 69, y: 122, width: 22, height: 20, fill: '#3d6bff', stroke: INK, 'stroke-width': .3 }, g);
+      const l = { fill: 'none', stroke: '#fff', 'stroke-width': .32 };
+      el('rect', { x: 69.6, y: 122.6, width: 20.8, height: 18.8, ...l }, g);
+      el('rect', { x: 76.5, y: 122.6, width: 7, height: 8, ...l }, g);
+      el('circle', { cx: 80, cy: 130.6, r: 2.6, ...l }, g);
+      el('path', { d: 'M71.4 122.6 V125.4 A8.8 8.8 0 0 0 88.6 125.4 V122.6', ...l }, g);
+      el('circle', { cx: 80, cy: 124.2, r: .8, fill: 'none', stroke: '#ff6b2c', 'stroke-width': .4 }, g);
+      [144.2, 145.9, 147.6].forEach((y, i) => el('rect', { x: 66, y, width: 28, height: 1.4, fill: ['#fff', '#d5dfff', '#fff'][i], stroke: INK, 'stroke-width': .2 }, g));
+    },
+    pabellon(z, g) {
+      forma(z, g, { class: 'forma', fill: '#f3dfc8', stroke: INK, 'stroke-width': .6 });
+      for (let x = 143.6; x < 171; x += 1.4) el('line', { x1: x, y1: 67, x2: x, y2: 91, stroke: '#c9864a', 'stroke-width': .4 }, g);
+    },
+    patio(z, g) {
+      forma(z, g, { class: 'forma', fill: '#ffd4e7', stroke: INK, 'stroke-width': .6 });
+      [[147, 106, 3, '#ff5fa2'], [167, 107, 2.6, '#3d6bff'], [168, 121, 3.2, '#ffc31f'], [149, 122, 2.4, '#1fb36b'], [158, 124, 1.8, '#a259ff']]
+        .forEach(([x, y, r, c]) => el('rect', { x: x - r, y: y - r, width: r * 2, height: r * 2, fill: c, stroke: INK, 'stroke-width': .25 }, g));
+      el('rect', { x: 160, y: 110, width: 3, height: 3, fill: '#ff6b2c', stroke: INK, 'stroke-width': .25 }, g);
+    },
+    foro(z, g) {
+      forma(z, g, { class: 'forma', fill: '#ead9ff', stroke: INK, 'stroke-width': .6 });
+      el('rect', { x: 213, y: 127, width: 15, height: 22, fill: INK }, g);
+      ['#ff5fa2', '#ffc31f', '#3d6bff', '#1fb36b'].forEach((c, i) => el('rect', { x: 214, y: 129 + i * 5.2, width: 1.4, height: 1.4, fill: c }, g));
+      for (let x = 188; x <= 204; x += 4) el('line', { x1: x, y1: 129, x2: x, y2: 147, stroke: '#a259ff', 'stroke-width': 1.1, 'stroke-dasharray': '2.4 .8' }, g);
+    },
+    mercado(z, g) {
+      edificio(z, g);
+      for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) el('rect', { x: 190 + i * 12, y: 76 + j * 12, width: 8, height: 7, fill: '#ff9f1c', stroke: INK, 'stroke-width': .2 }, g);
+    },
+    cinepolis(z, g) {
+      edificio(z, g);
+      el('rect', { x: 176, y: 22, width: 1.6, height: 28, fill: '#ff3b3b', stroke: INK, 'stroke-width': .2 }, g);
+      el('text', { x: 203, y: 46, 'text-anchor': 'middle', class: 'etq sub' }, g).textContent = 'NIVEL 2';
+    },
+    liverpool(z, g) { edificio(z, g); el('rect', { x: 56.6, y: 24, width: 1.6, height: 40, fill: '#ff5fa2', stroke: INK, 'stroke-width': .2 }, g); },
+    moda(z, g) { edificio(z, g); el('rect', { x: 71, y: 38.6, width: 40, height: 1.6, fill: '#3d6bff', stroke: INK, 'stroke-width': .2 }, g); },
+    moda2(z, g) { edificio(z, g); el('rect', { x: 123, y: 38.6, width: 40, height: 1.6, fill: '#1fb36b', stroke: INK, 'stroke-width': .2 }, g); },
+  };
+
+  // Cada zona tiene dos grupos: la forma (abajo) y el pin (arriba de árboles y luces).
+  const gruposZona = {};
+  const zonaClase = (id, cls, on) => gruposZona[id].forEach((g) => g.classList.toggle(cls, on));
+  ['calzada', ...D.zonas.map((z) => z.id).filter((id) => id !== 'calzada')].forEach((id) => {
+    const z = D.zona(id);
+    const g = el('g', { class: 'zona', 'data-id': id, tabindex: 0, role: 'button', 'aria-label': z.nombre }, capaZonas);
+    deco[id](z, g);
+    gruposZona[id] = [g];
+  });
+
+  D.arboles.forEach(([x, y]) => {
+    el('circle', { cx: x, cy: y, r: 2.5, fill: '#1fb36b', stroke: INK, 'stroke-width': .3 }, capaArboles);
+    el('circle', { cx: x - .6, cy: y - .6, r: 1, fill: '#7be0a8' }, capaArboles);
+  });
+
+  function dibujarLuces(capa, noche) {
+    D.luces.forEach(([x1, y1, x2, y2], i) => {
+      if (!noche) el('line', { x1, y1, x2, y2, stroke: INK, 'stroke-width': .12 }, capa);
+      const n = Math.max(2, Math.round(Math.hypot(x2 - x1, y2 - y1) / 2.4));
+      for (let k = 1; k < n; k++) {
+        const cx = x1 + (x2 - x1) * (k / n), cy = y1 + (y2 - y1) * (k / n);
+        if (noche) {
+          el('circle', { cx, cy, r: 1.3, fill: '#ffc31f', opacity: .4, filter: 'url(#f-brillo)', class: (i + k) % 3 ? '' : 'bulbo-titila' }, capa);
+          el('circle', { cx, cy, r: .35, fill: '#fff6d6' }, capa);
+        } else {
+          el('circle', { cx, cy, r: .45, fill: '#ffc31f', stroke: INK, 'stroke-width': .12 }, capa);
+        }
+      }
+    });
+  }
+  dibujarLuces(capaLuces, false);
+
+  D.zonas.forEach((z) => {
+    const g = el('g', { class: 'zona', 'data-id': z.id, 'aria-hidden': 'true' }, capaPins);
+    gruposZona[z.id].push(g);
+    const pin = el('g', { transform: `translate(${z.pin[0]} ${z.pin[1]})` }, g);
+    el('rect', { class: 'pin-aro', x: -4.4, y: -4.4, width: 8.8, height: 8.8 }, pin);
+    const inn = el('g', { class: 'pin-in' }, pin);
+    el('rect', { x: -3.8, y: -3.8, width: 8.8, height: 8.8, fill: INK }, inn);
+    el('rect', { x: -4.4, y: -4.4, width: 8.8, height: 8.8, fill: z.acento, stroke: INK, 'stroke-width': .6 }, inn);
+    el('use', { href: `#ic-${z.icono}`, x: -2.8, y: -2.8, width: 5.6, height: 5.6, style: `color:${D.tinta(z.acento)}` }, inn);
+    el('text', { class: 'etq', y: 9, 'text-anchor': 'middle' }, inn).textContent = z.nombre;
+  });
+
+  D.perlas.forEach((p, i) => {
+    const g = el('g', { class: 'perla', 'data-i': i, transform: `translate(${p.pos[0]} ${p.pos[1]})` }, capaPerlas);
+    el('circle', { r: 5.5, fill: 'transparent' }, g);
+    el('circle', { r: 2.6, fill: '#ff5fa2', opacity: .45, filter: 'url(#f-brillo)' }, g);
+    el('circle', { r: 1.8, fill: 'url(#g-perla)', stroke: '#fff', 'stroke-width': .2 }, g);
+    el('circle', { cx: -.55, cy: -.6, r: .45, fill: '#fff' }, g);
+  });
+
+  el('rect', { x: 0, y: 0, width: 240, height: 178, fill: '#0e0e16', opacity: .94, mask: 'url(#m-linterna)' }, capaNoche);
+  el('circle', { id: 'linterna-aro', cx: 120, cy: 80, r: RADIO_LINTERNA - 2, fill: 'none', stroke: '#ffc31f', 'stroke-width': .3, 'stroke-dasharray': '1.2 1', opacity: .7 }, capaNoche);
+  dibujarLuces(capaFocos, true);
+
+  const linterna = document.getElementById('linterna');
+  const linternaAro = document.getElementById('linterna-aro');
+  function moverLuz(x, y) {
+    S.luz = { x, y };
+    linterna.setAttribute('cx', x); linterna.setAttribute('cy', y);
+    linternaAro.setAttribute('cx', x); linternaAro.setAttribute('cy', y);
+  }
+  function puntoSVG(e) {
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+    return { x: p.x, y: p.y };
+  }
+
+  /* ================= Utilidades de UI ================= */
+  let toastT;
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('on');
+    clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2400);
+  }
+  function modal(html) {
+    const m = document.getElementById('modal');
+    document.getElementById('modalCard').innerHTML = `<div class="cuadros"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="dentro">${html}</div>`;
+    m.hidden = false;
+  }
+  document.getElementById('modal').addEventListener('click', (e) => {
+    if (e.target.id === 'modal' || e.target.closest('[data-cerrar]')) document.getElementById('modal').hidden = true;
+  });
+  function limpiarMarcas() {
+    Object.values(gruposZona).flat().forEach((g) => g.classList.remove('ok', 'mal', 'revela', 'sel'));
+    capaMarcas.innerHTML = '';
+  }
+  function marcarSeleccion() { Object.keys(gruposZona).forEach((id) => zonaClase(id, 'sel', id === S.sel)); }
+  const sinHover = matchMedia('(hover: none)').matches;
+  ['pointerover', 'focusin'].forEach((ev) => svg.addEventListener(ev, (e) => {
+    if (sinHover && ev === 'pointerover') return;
+    const g = e.target.closest('.zona');
+    Object.keys(gruposZona).forEach((id) => zonaClase(id, 'hov', !!g && g.dataset.id === id));
+  }));
+  ['pointerleave', 'focusout'].forEach((ev) => svg.addEventListener(ev, () => {
+    Object.keys(gruposZona).forEach((id) => zonaClase(id, 'hov', false));
+  }));
+
+  /* ================= Modo: Explorar ================= */
+  const FILTROS = [
+    ['todo', 'Todo', '#ffffff'], ['experiencias', 'Experiencias', '#ff6b2c'], ['comida', 'Comida', '#ff9f1c'], ['tiendas', 'Tiendas', '#141414'],
+    ['pet', 'Pet friendly', '#7ccf3f'], ['ninos', 'Niños', '#ff5fa2'], ['deporte', 'Deporte', '#3d6bff'], ['entretenimiento', 'Eventos y cine', '#a259ff'],
+  ];
+  const filtrosEl = document.getElementById('filtros');
+  filtrosEl.innerHTML = FILTROS.map(([k, t, c]) => `<button class="chip${k === 'todo' ? ' on' : ''}" data-f="${k}" style="--c:${c};--t:${D.tinta(c)}"><i></i>${t}</button>`).join('');
+  filtrosEl.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-f]');
+    if (!b) return;
+    S.filtro = b.dataset.f;
+    filtrosEl.querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', c === b));
+    aplicarFiltro();
+  });
+  function aplicarFiltro() {
+    const activo = S.modo === 'explorar' && S.filtro !== 'todo';
+    svg.classList.toggle('filtrando', activo);
+    D.zonas.forEach((z) => zonaClase(z.id, 'match', !activo || z.filtros.includes(S.filtro)));
+  }
+
+  function htmlPasaporte() {
+    const n = SELLABLES.filter((z) => S.sellos.has(z.id)).length;
+    return `
+      <div class="pasaporte">
+        <div class="pasaporte-head"><h3>Pasaporte La Perla</h3><span>${n}/${SELLABLES.length}</span></div>
+        <div class="sellos">
+          ${SELLABLES.map((z) => `<button class="sello${S.sellos.has(z.id) ? ' on' : ''}${S.nuevoSello === z.id ? ' nuevo' : ''}" style="${estiloZona(z)}" data-ir="${z.id}" title="${z.nombre}" aria-label="${z.nombre}${S.sellos.has(z.id) ? ' (sellado)' : ''}">${icono(z.icono)}</button>`).join('')}
+          <span class="sello" style="background:repeating-linear-gradient(45deg,#fff 0 4px,#ececec 4px 8px)"></span>
+        </div>
+        <div class="barra"><i style="width:${(n / SELLABLES.length) * 100}%"></i></div>
+        ${n ? '<button class="link" data-accion="reiniciar-sellos">Reiniciar pasaporte</button>' : ''}
+      </div>`;
+  }
+
+  function renderExplorar() {
+    const z = S.sel ? D.zona(S.sel) : null;
+    const ficha = z ? `
+      <article class="ficha" style="${estiloZona(z)}">
+        <div class="bloque-color">
+          <span class="ico">${icono(z.icono)}</span>
+          <div><p class="eyebrow">${z.categoria}</p><h2>${z.nombre}</h2></div>
+        </div>
+        <div class="panel-cuerpo">
+          <p>${z.desc}</p>
+          ${(z.m2 || z.horario) ? `<dl class="stats">
+            ${z.m2 ? `<div><dt>Superficie</dt><dd>${z.m2}</dd></div>` : ''}
+            ${z.horario ? `<div><dt>Horario</dt><dd>${z.horario}</dd></div>` : ''}
+          </dl>` : ''}
+          <ul class="chips">${z.datos.map((d) => `<li>${d}</li>`).join('')}</ul>
+          ${z.sello ? `<div class="sello-ok"><i>✓</i><span>Sello en tu pasaporte</span></div>` : ''}
+        </div>
+      </article>` : `
+      <div class="bloque-color" style="--c:var(--naranja);--t:var(--ink)">
+        <div><p class="eyebrow">Explorar</p><h2>Conoce La Perla</h2></div>
+      </div>
+      <div class="panel-cuerpo">
+        <p>Toca cualquier zona del mapa para ver qué hay, cuánto mide y cuándo visitarla. Cada experiencia que visites sella tu pasaporte.</p>
+        <p class="muted" style="margin:0">Usa los filtros para encontrar lo que buscas: comida, pet friendly, niños…</p>
+      </div>`;
+    panel.innerHTML = `${ficha}${htmlPasaporte()}`;
+    S.nuevoSello = null;
+  }
+
+  function seleccionar(id) {
+    S.sel = id;
+    marcarSeleccion();
+    const z = D.zona(id);
+    if (z.sello && !S.sellos.has(id)) {
+      S.sellos.add(id);
+      S.nuevoSello = id;
+      guardado.set('laperla-sellos', [...S.sellos]);
+      const n = SELLABLES.filter((x) => S.sellos.has(x.id)).length;
+      if (n === SELLABLES.length) {
+        setTimeout(() => modal(`
+          <p class="eyebrow">Pasaporte La Perla</p>
+          <h2>¡Pasaporte completo!</h2>
+          <p>Visitaste las ${SELLABLES.length} experiencias de La Perla. En la versión final, aquí puede desbloquearse un beneficio para canjear en la plaza.</p>
+          <div class="btn-row"><button class="btn" data-cerrar>Seguir explorando</button></div>`), 600);
+      } else {
+        toast(`¡Sello conseguido! ${n}/${SELLABLES.length}`);
+      }
+    }
+    renderExplorar();
+    if (matchMedia('(max-width: 960px)').matches) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /* ================= Modo: ¿Dónde está? ================= */
+  function renderReto() {
+    const r = S.reto;
+    const mejor = guardado.get('laperla-reto-mejor', 0);
+    if (!r) {
+      panel.innerHTML = `
+        <div class="bloque-color" style="--c:var(--azul);--t:#fff"><div><p class="eyebrow">Juego</p><h2>¿Dónde está?</h2></div></div>
+        <div class="panel-cuerpo">
+          <p>Te damos una pista y tú tocas en el mapa la zona correcta. Son 8 rondas de ${SEG_RONDA} segundos: entre más rápido respondas, más puntos.</p>
+          ${mejor ? `<p class="muted">Tu mejor puntaje: <b style="color:var(--ink)">${mejor}</b></p>` : ''}
+          <div class="btn-row"><button class="btn" style="--c:var(--azul);--t:#fff" data-accion="reto-iniciar">Empezar reto</button></div>
+        </div>`;
+      return;
+    }
+    if (r.fin) {
+      const nuevo = r.puntos > (r.mejorPrevio || 0);
+      panel.innerHTML = `
+        <div class="bloque-color" style="--c:var(--amarillo);--t:var(--ink)"><div><p class="eyebrow">Resultado</p><div class="big-num">${r.puntos}</div><b>puntos · ${r.aciertos} de ${r.rondas.length} aciertos</b></div></div>
+        <div class="panel-cuerpo">
+          <p class="muted">${nuevo ? '¡Nuevo récord personal!' : `Tu mejor puntaje: ${mejor}`}</p>
+          <p>${r.aciertos >= 7 ? 'Conoces La Perla como la palma de tu mano.' : r.aciertos >= 4 ? '¡Bien! Ya casi eres guía de La Perla.' : 'Te invitamos a darte una vuelta y conocerla mejor.'}</p>
+          <div class="btn-row"><button class="btn" style="--c:var(--azul);--t:#fff" data-accion="reto-iniciar">Jugar otra vez</button><button class="btn sec" data-modo-ir="explorar">Explorar</button></div>
+        </div>`;
+      return;
+    }
+    const ronda = r.rondas[r.i];
+    panel.innerHTML = `
+      <div class="marcador"><div><span class="mini-lbl">Ronda</span><b>${r.i + 1}/${r.rondas.length}</b></div><div><span class="mini-lbl" style="color:var(--ink)">Puntos</span><b id="ptsReto">${r.puntos}</b></div></div>
+      <div class="pista-box"><p class="eyebrow">Pista</p><p>${ronda.pista}</p></div>
+      <div class="tiempo"><i id="barraTiempo"></i></div>
+      <div class="panel-cuerpo"><div class="resp" id="resp"><span class="muted" style="font-weight:600">Toca la zona en el mapa…</span></div></div>`;
+  }
+
+  function iniciarReto() {
+    S.reto = { rondas: barajar(D.acertijos).slice(0, 8), i: 0, puntos: 0, aciertos: 0, bloqueado: false, t0: 0, raf: 0, mejorPrevio: guardado.get('laperla-reto-mejor', 0) };
+    siguienteRonda();
+    if (matchMedia('(max-width: 960px)').matches) document.querySelector('.mapa-marco').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function siguienteRonda() {
+    const r = S.reto;
+    limpiarMarcas();
+    if (r.i >= r.rondas.length) {
+      r.fin = true;
+      document.getElementById('pistaMapa').hidden = true;
+      if (r.puntos > r.mejorPrevio) guardado.set('laperla-reto-mejor', r.puntos);
+      renderReto();
+      return;
+    }
+    r.bloqueado = false;
+    r.t0 = performance.now();
+    renderReto();
+    const pm = document.getElementById('pistaMapa');
+    pm.innerHTML = `<small>Ronda ${r.i + 1}/${r.rondas.length} · ${r.puntos} pts</small>${r.rondas[r.i].pista}`;
+    pm.hidden = false;
+    const tick = () => {
+      if (S.modo !== 'reto' || S.reto !== r || r.bloqueado) return;
+      const t = (performance.now() - r.t0) / 1000;
+      const barra = document.getElementById('barraTiempo');
+      if (barra) {
+        barra.style.width = `${Math.max(0, 1 - t / SEG_RONDA) * 100}%`;
+        barra.style.background = t > SEG_RONDA * .7 ? 'var(--rojo)' : 'var(--naranja)';
+      }
+      if (t >= SEG_RONDA) responder(null);
+      else r.raf = requestAnimationFrame(tick);
+    };
+    r.raf = requestAnimationFrame(tick);
+  }
+  function responder(id, punto) {
+    const r = S.reto;
+    if (!r || r.fin || r.bloqueado) return;
+    r.bloqueado = true;
+    cancelAnimationFrame(r.raf);
+    const ronda = r.rondas[r.i];
+    const correcta = D.zona(ronda.zona);
+    const t = (performance.now() - r.t0) / 1000;
+    const resp = document.getElementById('resp');
+    if (punto) {
+      const c = el('rect', { x: punto.x - 1, y: punto.y - 1, width: 2, height: 2, fill: 'none', stroke: id === ronda.zona ? '#1fb36b' : '#ff3b3b', 'stroke-width': .7 }, capaMarcas);
+      el('animateTransform', { attributeName: 'transform', type: 'scale', from: '1', to: '1', dur: '.7s' }, c);
+      el('animate', { attributeName: 'opacity', from: 1, to: 0, dur: '.9s', fill: 'freeze' }, c);
+    }
+    let msg;
+    if (id === ronda.zona) {
+      const pts = 100 + Math.round((Math.max(0, SEG_RONDA - t) / SEG_RONDA) * 50);
+      r.puntos += pts; r.aciertos++;
+      zonaClase(id, 'ok', true);
+      resp.className = 'resp ok';
+      resp.innerHTML = `¡Correcto! +${pts} pts<small>${correcta.nombre} · ${correcta.categoria}</small>`;
+      msg = `¡Correcto! +${pts}`;
+    } else {
+      if (id) zonaClase(id, 'mal', true);
+      zonaClase(correcta.id, 'revela', true);
+      resp.className = 'resp mal';
+      resp.innerHTML = `${id ? 'Casi…' : '¡Se acabó el tiempo!'}<small>Era ${correcta.nombre}, marcada en verde en el mapa.</small>`;
+      msg = `Era ${correcta.nombre}`;
+    }
+    toast(msg);
+    const pm = document.getElementById('ptsReto'); if (pm) pm.textContent = r.puntos;
+    setTimeout(() => { if (S.reto === r && S.modo === 'reto') { r.i++; siguienteRonda(); } }, id === ronda.zona ? 1300 : 2200);
+  }
+
+  /* ================= Modo: Caza de perlas ================= */
+  function tiempoCaza() { const c = S.caza; return c ? (performance.now() - c.t0) / 1000 + c.penal : 0; }
+  function renderCaza() {
+    const c = S.caza;
+    const mejor = guardado.get('laperla-caza-mejor', 0);
+    if (!c) {
+      panel.innerHTML = `
+        <div class="bloque-color" style="--c:var(--rosa);--t:var(--ink)"><div><p class="eyebrow">Juego</p><h2>Caza de perlas</h2></div></div>
+        <div class="panel-cuerpo">
+          <p>Cae la noche en La Perla. Hay ${D.perlas.length} perlas escondidas: mueve tu linterna sobre el mapa y tócalas cuando estén iluminadas. Cada perla guarda un dato curioso.</p>
+          <p class="muted">En celular: toca para mover la linterna y vuelve a tocar la perla para tomarla.</p>
+          ${mejor ? `<p class="muted">Tu mejor tiempo: <b style="color:var(--ink)">${mmss(mejor)}</b></p>` : ''}
+          <div class="btn-row"><button class="btn" style="--c:var(--rosa)" data-accion="caza-iniciar">Encender linterna</button></div>
+        </div>`;
+      return;
+    }
+    const n = c.encontradas.length;
+    if (c.fin) {
+      panel.innerHTML = `
+        <div class="bloque-color" style="--c:var(--verde);--t:var(--ink)"><div><p class="eyebrow">¡Las encontraste todas!</p><div class="big-num">${mmss(c.total)}</div><b>${D.perlas.length} perlas${c.pistas ? ` · ${c.pistas} pista${c.pistas > 1 ? 's' : ''}` : ''}</b></div></div>
+        <div class="panel-cuerpo">
+          <p class="muted">${c.record ? '¡Nuevo récord personal!' : `Tu mejor tiempo: ${mmss(mejor)}`}</p>
+          <div class="btn-row" style="margin-bottom:16px"><button class="btn" style="--c:var(--rosa)" data-accion="caza-iniciar">Jugar otra vez</button><button class="btn sec" data-modo-ir="explorar">Explorar</button></div>
+          <ul class="datos-list">${c.encontradas.map((i, k) => `<li><b>${k + 1}</b>${D.perlas[i].dato}</li>`).join('')}</ul>
+        </div>`;
+      return;
+    }
+    panel.innerHTML = `
+      <div class="contador"><div class="num"><span class="mini-lbl" style="color:var(--ink)">Perlas</span><b>${n}/${D.perlas.length}</b></div><div class="reloj"><span class="mini-lbl">Tiempo</span><b id="reloj">${mmss(tiempoCaza())}</b></div></div>
+      <div class="panel-cuerpo">
+        <div class="btn-row" style="margin:0 0 16px"><button class="btn" style="--c:var(--amarillo)" data-accion="caza-pista">Pista +10 s</button><button class="btn sec" data-accion="caza-salir">Terminar</button></div>
+        ${n ? `<ul class="datos-list">${c.encontradas.slice().reverse().map((i, k) => `<li><b>${n - k}</b>${D.perlas[i].dato}</li>`).join('')}</ul>` : '<p class="muted" style="margin:0">Aún no encuentras perlas. Recorre el mapa con la linterna…</p>'}
+      </div>`;
+  }
+  function iniciarCaza() {
+    pararCaza();
+    capaPerlas.querySelectorAll('.perla').forEach((p) => p.classList.remove('tomada'));
+    S.caza = { encontradas: [], t0: performance.now(), penal: 0, pistas: 0, fin: false };
+    S.caza.int = setInterval(() => { const r = document.getElementById('reloj'); if (r) r.textContent = mmss(tiempoCaza()); }, 250);
+    svg.classList.add('modo-noche');
+    moverLuz(122, 150);
+    renderCaza();
+    if (matchMedia('(max-width: 960px)').matches) document.querySelector('.mapa-marco').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function pararCaza() {
+    if (S.caza) clearInterval(S.caza.int);
+    svg.classList.remove('modo-noche');
+    capaPistas.innerHTML = '';
+  }
+  function tomarPerla(i) {
+    const c = S.caza;
+    if (!c || c.fin || c.encontradas.includes(i)) return;
+    c.encontradas.push(i);
+    capaPerlas.querySelector(`.perla[data-i="${i}"]`).classList.add('tomada');
+    if (c.encontradas.length === D.perlas.length) {
+      c.fin = true;
+      c.total = tiempoCaza();
+      clearInterval(c.int);
+      const mejor = guardado.get('laperla-caza-mejor', 0);
+      c.record = !mejor || c.total < mejor;
+      if (c.record) guardado.set('laperla-caza-mejor', c.total);
+      setTimeout(() => { if (S.caza === c) svg.classList.remove('modo-noche'); }, 600);
+      renderCaza();
+    } else {
+      toast(`¡Perla ${c.encontradas.length}/${D.perlas.length}! ${D.perlas[i].dato}`);
+      renderCaza();
+    }
+  }
+  function pista() {
+    const c = S.caza;
+    if (!c || c.fin) return;
+    const resto = D.perlas.map((p, i) => i).filter((i) => !c.encontradas.includes(i));
+    const p = D.perlas[resto[Math.floor(Math.random() * resto.length)]].pos;
+    el('circle', { class: 'pista-aro', cx: p[0] + (Math.random() - .5) * 10, cy: p[1] + (Math.random() - .5) * 10, r: 12 }, capaPistas);
+    setTimeout(() => capaPistas.firstChild && capaPistas.removeChild(capaPistas.firstChild), 2300);
+    c.penal += 10; c.pistas++;
+  }
+
+  /* ================= Eventos ================= */
+  function cambiarModo(modo) {
+    if (S.reto) cancelAnimationFrame(S.reto.raf);
+    pararCaza();
+    S.modo = modo; S.reto = null; S.caza = null; S.sel = null;
+    document.getElementById('pistaMapa').hidden = true;
+    limpiarMarcas();
+    document.querySelectorAll('.modos button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.modo === modo)));
+    filtrosEl.hidden = modo !== 'explorar';
+    aplicarFiltro();
+    ({ explorar: renderExplorar, reto: renderReto, caza: renderCaza })[modo]();
+  }
+  document.querySelector('.modos').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-modo]');
+    if (b) cambiarModo(b.dataset.modo);
+  });
+
+  panel.addEventListener('click', (e) => {
+    const a = e.target.closest('[data-accion]');
+    const ir = e.target.closest('[data-ir]');
+    const modoIr = e.target.closest('[data-modo-ir]');
+    if (modoIr) return cambiarModo(modoIr.dataset.modoIr);
+    if (ir) return seleccionar(ir.dataset.ir);
+    if (!a) return;
+    switch (a.dataset.accion) {
+      case 'reto-iniciar': iniciarReto(); break;
+      case 'caza-iniciar': iniciarCaza(); break;
+      case 'caza-pista': pista(); break;
+      case 'caza-salir': pararCaza(); S.caza = null; renderCaza(); break;
+      case 'reiniciar-sellos': S.sellos.clear(); guardado.set('laperla-sellos', []); renderExplorar(); toast('Pasaporte reiniciado'); break;
+    }
+  });
+
+  svg.addEventListener('click', (e) => {
+    if (S.modo === 'caza') return;
+    const g = e.target.closest('.zona');
+    if (!g) return;
+    if (S.modo === 'explorar') seleccionar(g.dataset.id);
+    else if (S.modo === 'reto' && S.reto && !S.reto.fin) responder(g.dataset.id, puntoSVG(e));
+  });
+  svg.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const g = e.target.closest('.zona');
+    if (!g) return;
+    e.preventDefault();
+    if (S.modo === 'explorar') seleccionar(g.dataset.id);
+    else if (S.modo === 'reto' && S.reto && !S.reto.fin) responder(g.dataset.id);
+  });
+  svg.addEventListener('pointermove', (e) => {
+    if (S.modo !== 'caza' || !S.caza || S.caza.fin || e.pointerType !== 'mouse') return;
+    const p = puntoSVG(e); moverLuz(p.x, p.y);
+  });
+  svg.addEventListener('pointerdown', (e) => {
+    if (S.modo !== 'caza' || !S.caza || S.caza.fin) return;
+    const perla = e.target.closest('.perla');
+    if (perla) {
+      const pos = D.perlas[+perla.dataset.i].pos;
+      // Solo se toma si ya estaba iluminada antes de tocar.
+      if (Math.hypot(pos[0] - S.luz.x, pos[1] - S.luz.y) < RADIO_LINTERNA * .8) { tomarPerla(+perla.dataset.i); return; }
+    }
+    const p = puntoSVG(e); moverLuz(p.x, p.y);
+  });
+
+  cambiarModo('explorar');
+  // En pantallas angostas el mapa se desplaza de lado: arrancamos centrados en la Calzada.
+  const scroller = document.querySelector('.mapa-scroll');
+  scroller.scrollLeft = (scroller.scrollWidth - scroller.clientWidth) / 2;
+})();
+</script>
+</body>
+</html>
