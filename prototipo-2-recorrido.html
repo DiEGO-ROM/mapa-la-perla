@@ -10,15 +10,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root {
-    --ink: #141414;
-    --gris: #f4f4f2;
-    --muted: #5c5c5c;
-    --naranja: #ff6b2c;
-    --verde: #1fb36b;
-    --rosa: #ff5fa2;
-    --azul: #3d6bff;
-    --amarillo: #ffc31f;
-    --morado: #a259ff;
+    --ink: #141414; --gris: #f4f4f2; --muted: #5c5c5c;
+    --naranja: #ff6b2c; --verde: #1fb36b; --rosa: #ff5fa2; --azul: #3d6bff; --amarillo: #ffc31f; --morado: #a259ff;
     --borde: 2px solid var(--ink);
   }
   * { box-sizing: border-box; }
@@ -27,7 +20,6 @@
   button { font: inherit; color: inherit; cursor: pointer; }
   #escena { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; outline: none; }
   #escena.arrastrando { cursor: grabbing; }
-
   .caja { background: #fff; border: var(--borde); box-shadow: 4px 4px 0 var(--ink); }
   .hud { position: fixed; inset: 0; pointer-events: none; z-index: 2; transition: opacity .4s; }
   .hud.oculto { opacity: 0; }
@@ -40,22 +32,17 @@
   .marca b { letter-spacing: .22em; font-weight: 900; font-size: 15px; }
   .marca b sup { font-size: 8px; letter-spacing: 0; }
   .marca span { display: block; font-size: 10px; margin-top: 3px; font-weight: 600; opacity: .8; }
-  .marca .cuadros { display: grid; grid-template-rows: repeat(3, 1fr); width: 14px; }
+  .marca .cuadros { display: grid; grid-template-rows: repeat(3, 1fr); width: 14px; border-left: var(--borde); }
   .marca .cuadros i:nth-child(1) { background: var(--naranja); } .marca .cuadros i:nth-child(2) { background: var(--verde); } .marca .cuadros i:nth-child(3) { background: var(--rosa); }
   .marca .cuadros i + i { border-top: var(--borde); }
-  .marca .cuadros { border-left: var(--borde); }
 
-  .lugar {
-    position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
-    display: flex; align-items: stretch; padding: 0; font-weight: 800; font-size: 14px; white-space: nowrap; max-width: calc(100vw - 32px);
-  }
+  .lugar { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); display: flex; align-items: stretch; padding: 0; font-weight: 800; font-size: 14px; white-space: nowrap; max-width: calc(100vw - 32px); }
   .lugar .punto { width: 38px; flex: none; background: var(--acc, var(--naranja)); border-right: var(--borde); }
   .lugar .txt-l { padding: 9px 12px; display: flex; flex-direction: column; text-align: left; overflow: hidden; }
   .lugar small { font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-  .lugar .i { width: 34px; display: grid; place-items: center; border-left: var(--borde); font-size: 13px; font-weight: 900; }
 
   .mini { position: absolute; top: 16px; right: 16px; }
-  .mini canvas { display: block; width: 230px; height: 171px; cursor: pointer; }
+  .mini canvas { display: block; width: 230px; height: 200px; cursor: pointer; }
   .mini-pie { display: flex; justify-content: space-between; align-items: stretch; border-top: var(--borde); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
   .mini-pie > span { padding: 7px 10px; }
   .mini-pie button { background: var(--amarillo); border: 0; border-left: var(--borde); padding: 7px 12px; font-weight: 900; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
@@ -65,58 +52,47 @@
   .stats > div:nth-child(odd) { border-right: var(--borde); }
   .stats > div:nth-child(n+3) { border-top: var(--borde); }
   .stats b { font-size: 18px; font-weight: 900; display: block; margin-top: 2px; }
-  .stats > div:nth-child(5) { grid-column: 1 / -1; border-right: 0; }
-  .stats .perlas { background: var(--rosa); }
-  .stats .real { background: var(--amarillo); }
+  .stats .estrellas { background: var(--amarillo); }
+  .stats .real { background: #ffe6c2; }
 
   .botones { position: absolute; right: 16px; bottom: 16px; display: flex; gap: 10px; }
-  .bot { height: 46px; padding: 0 16px; font-weight: 900; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; transition: transform .1s, box-shadow .1s; }
+  .bot { height: 46px; padding: 0 16px; font-weight: 900; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
   .bot:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
   .bot svg { width: 18px; height: 18px; }
   .bot.icono { width: 46px; padding: 0; justify-content: center; font-size: 16px; }
   #btnNoche[aria-pressed="true"] { background: var(--morado); color: #fff; }
-  #btnSonido[aria-pressed="false"] { background: var(--gris); }
 
-  .ficha {
-    position: absolute; right: 16px; bottom: 80px; width: min(400px, calc(100vw - 32px)); padding: 0;
-    opacity: 0; transform: translateY(16px); transition: opacity .3s, transform .3s; pointer-events: none; --acc: var(--naranja); --t: var(--ink);
+  .jugar {
+    position: absolute; left: 50%; bottom: 90px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; transition: .25s;
+    display: flex; align-items: stretch; border: var(--borde); box-shadow: 6px 6px 0 var(--ink); background: #fff; max-width: calc(100vw - 24px);
   }
-  .ficha.on { opacity: 1; transform: none; pointer-events: auto; }
-  .hud .ficha:not(.on) { pointer-events: none; }
-  .ficha .cerrar { position: absolute; top: 0; right: 0; width: 40px; height: 40px; border: 0; border-left: var(--borde); border-bottom: var(--borde); background: #fff; font-size: 20px; font-weight: 700; line-height: 1; }
-  .ficha-top { display: flex; gap: 12px; align-items: center; padding: 14px 52px 14px 14px; background: var(--acc); color: var(--t); border-bottom: var(--borde); }
-  .ico { flex: none; width: 46px; height: 46px; display: grid; place-items: center; color: var(--ink); background: #fff; border: var(--borde); }
-  .ico svg { width: 26px; height: 26px; }
-  .ficha .eyebrow { margin-bottom: 2px; }
-  .ficha h2 { margin: 0; font-size: 21px; font-weight: 900; }
-  .ficha-cuerpo { padding: 14px 16px 16px; }
-  .ficha p.desc { margin: 0 0 12px; font-size: 13px; line-height: 1.5; font-weight: 500; }
-  .ficha .datos { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
-  .ficha .datos li { font-size: 11px; font-weight: 700; padding: 5px 8px; border: 1.5px solid var(--ink); background: var(--gris); }
-  .ficha .datos li.fuerte { background: var(--acc); color: var(--t); }
+  .jugar.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+  .jugar .ico { width: 64px; display: grid; place-items: center; background: var(--acc); color: var(--t); border-right: var(--borde); }
+  .jugar .ico svg { width: 30px; height: 30px; }
+  .jugar .txt { padding: 10px 14px; text-align: left; }
+  .jugar .txt small { display: block; font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .jugar .txt b { font-size: 17px; font-weight: 900; }
+  .jugar .txt em { font-style: normal; display: block; font-size: 12px; font-weight: 800; color: #b08600; letter-spacing: 1px; }
+  .jugar .go { background: var(--amarillo); border: 0; border-left: var(--borde); padding: 0 18px; font-weight: 900; font-size: 15px; text-transform: uppercase; }
 
-  .aviso {
-    position: absolute; top: 76px; left: 50%; transform: translate(-50%, -10px); opacity: 0; transition: .3s;
-    padding: 10px 16px; font-weight: 800; font-size: 14px; background: var(--ink); color: #fff; border: var(--borde); box-shadow: 4px 4px 0 var(--amarillo);
-    max-width: calc(100vw - 24px); text-align: center;
-  }
+  .aviso { position: absolute; top: 76px; left: 50%; transform: translate(-50%, -10px); opacity: 0; transition: .3s; padding: 10px 16px; font-weight: 800; font-size: 14px; background: var(--ink); color: #fff; border: var(--borde); box-shadow: 4px 4px 0 var(--amarillo); max-width: calc(100vw - 24px); text-align: center; }
   .aviso.on { opacity: 1; transform: translate(-50%, 0); }
 
   .joy { position: fixed; width: 124px; height: 124px; border-radius: 50%; border: 3px solid var(--ink); background: rgba(255, 255, 255, .55); display: none; pointer-events: none; transform: translate(-50%, -50%); z-index: 3; }
   .joy.on { display: block; }
   .joy i { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; background: var(--naranja); border: 3px solid var(--ink); }
 
-  .overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(255, 255, 255, .55); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); z-index: 10; padding: 16px; }
+  .overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, .55); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); z-index: 10; padding: 16px; }
   .overlay[hidden] { display: none; }
   .tarjeta { background: #fff; border: var(--borde); box-shadow: 8px 8px 0 var(--ink); width: min(540px, 100%); max-height: calc(100dvh - 32px); overflow: auto; animation: entra .35s ease-out; -webkit-user-select: text; user-select: text; }
   .tarjeta.ancha { width: min(1000px, 100%); }
-  .tarjeta .dentro { padding: 26px; }
-  .cuadros-top { display: grid; grid-template-columns: repeat(6, 1fr); height: 40px; border-bottom: var(--borde); }
+  .tarjeta .dentro { padding: 24px; }
+  .cuadros-top { display: grid; grid-template-columns: repeat(6, 1fr); height: 36px; border-bottom: var(--borde); }
   .cuadros-top i:nth-child(1) { background: var(--naranja); } .cuadros-top i:nth-child(2) { background: var(--verde); } .cuadros-top i:nth-child(3) { background: var(--rosa); }
   .cuadros-top i:nth-child(4) { background: var(--azul); } .cuadros-top i:nth-child(5) { background: var(--amarillo); } .cuadros-top i:nth-child(6) { background: var(--morado); }
   .cuadros-top i + i { border-left: var(--borde); }
   @keyframes entra { from { opacity: 0; transform: translateY(10px); } }
-  .tarjeta h1 { font-size: 40px; margin: 2px 0 12px; font-weight: 900; line-height: 1; letter-spacing: -.02em; }
+  .tarjeta h1 { font-size: 38px; margin: 2px 0 12px; font-weight: 900; line-height: 1; letter-spacing: -.02em; }
   .tarjeta h2 { font-size: 26px; margin: 2px 0 10px; font-weight: 900; }
   .tarjeta p { line-height: 1.55; font-size: 14px; margin: 0 0 14px; font-weight: 500; }
   .escala { display: flex; align-items: stretch; border: var(--borde); margin: 4px 0 18px; }
@@ -125,51 +101,40 @@
   .controles { display: grid; grid-template-columns: auto 1fr; gap: 10px 14px; font-size: 13px; margin: 0 0 22px; align-items: center; font-weight: 600; }
   .tecla { display: inline-flex; gap: 4px; flex-wrap: wrap; }
   .tecla kbd { font: 800 11px 'Montserrat', sans-serif; padding: 4px 7px; background: #fff; border: 1.5px solid var(--ink); box-shadow: 2px 2px 0 var(--ink); }
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: var(--borde); padding: 14px 22px; font-weight: 900; font-size: 14px; text-transform: uppercase; letter-spacing: .05em; background: var(--naranja); color: var(--ink); box-shadow: 4px 4px 0 var(--ink); transition: transform .1s, box-shadow .1s; }
-  .btn:active { transform: translate(4px, 4px); box-shadow: 0 0 0 var(--ink); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: var(--borde); padding: 14px 22px; font-weight: 900; font-size: 14px; text-transform: uppercase; letter-spacing: .05em; background: var(--naranja); color: var(--ink); box-shadow: 4px 4px 0 var(--ink); }
+  .btn:active { transform: translate(4px, 4px); box-shadow: none; }
   .btn:disabled { background: var(--gris); cursor: wait; }
   .fila-btn { display: flex; gap: 12px; flex-wrap: wrap; }
   .muted { color: var(--muted) !important; }
   .mapa-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
-  #mapaCanvas { width: min(100%, calc((100dvh - 300px) * 240 / 178)); min-width: min(100%, 300px); margin: 0 auto; aspect-ratio: 240 / 178; display: block; cursor: pointer; border: var(--borde); background: #fff; }
+  #mapaCanvas { width: min(100%, calc((100dvh - 300px) * 1.1)); min-width: min(100%, 300px); margin: 0 auto; aspect-ratio: 1.1; display: block; cursor: pointer; border: var(--borde); background: #fff; }
   .lista { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
   .lista button { border: 1.5px solid var(--ink); background: #fff; padding: 7px 10px 7px 8px; font-size: 12px; font-weight: 800; display: inline-flex; gap: 6px; align-items: center; }
   .lista button i { width: 11px; height: 11px; background: var(--c); border: 1.5px solid var(--ink); }
-  .lista button.hecha { background: var(--gris); }
   .resumen { display: grid; grid-template-columns: 1fr 1fr; border: var(--borde); margin: 6px 0 20px; }
   .resumen div { padding: 12px 14px; }
   .resumen div:nth-child(odd) { border-right: var(--borde); }
   .resumen div:nth-child(n+3) { border-top: var(--borde); }
   .resumen b { display: block; font-size: 24px; font-weight: 900; margin-top: 2px; }
-  .resumen .real { background: var(--amarillo); }
+  .resumen .real { background: #ffe6c2; }
 
   @media (max-width: 760px) {
     .marca { display: none; }
     .lugar { left: 10px; transform: none; top: calc(10px + env(safe-area-inset-top)); font-size: 13px; max-width: calc(100vw - 172px); }
-    .lugar .punto { width: 14px; }
-    .lugar .txt-l { padding: 7px 10px; }
-    .lugar small { display: none; }
-    .lugar .i { width: 30px; }
+    .lugar .punto { width: 14px; } .lugar .txt-l { padding: 7px 10px; } .lugar small { display: none; }
     .mini { top: calc(10px + env(safe-area-inset-top)); right: 10px; }
-    .mini canvas { width: 144px; height: 107px; }
-    .mini-pie > span { display: none; }
-    .mini-pie button { flex: 1; border-left: 0; }
+    .mini canvas { width: 144px; height: 126px; }
+    .mini-pie > span { display: none; } .mini-pie button { flex: 1; border-left: 0; }
     .stats { left: 10px; top: calc(64px + env(safe-area-inset-top)); bottom: auto; width: calc(100vw - 182px); max-width: 230px; }
-    .stats > div { padding: 7px 9px; }
-    .stats > div:nth-child(n+3) { display: none; }
-    .stats b { font-size: 15px; }
+    .stats > div { padding: 7px 9px; } .stats > div:nth-child(n+3) { display: none; } .stats b { font-size: 15px; }
     .lbl { font-size: 9px; letter-spacing: .06em; }
     .botones { right: 10px; bottom: calc(14px + env(safe-area-inset-bottom)); flex-direction: column; }
-    .bot .txt { display: none; }
-    .bot { width: 46px; padding: 0; justify-content: center; }
-    .ficha { right: 10px; left: 10px; width: auto; bottom: calc(14px + env(safe-area-inset-bottom)); }
-    .ficha p.desc { font-size: 12.5px; }
+    .bot .txt { display: none; } .bot { width: 46px; padding: 0; justify-content: center; }
+    .jugar { bottom: calc(150px + env(safe-area-inset-bottom)); }
+    .jugar .txt b { font-size: 15px; }
     .aviso { top: calc(176px + env(safe-area-inset-top)); font-size: 13px; }
-    .tarjeta .dentro { padding: 20px; }
-    .tarjeta h1 { font-size: 32px; }
-    .cuadros-top { height: 28px; }
+    .tarjeta .dentro { padding: 20px; } .tarjeta h1 { font-size: 32px; } .cuadros-top { height: 28px; }
   }
-  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 </style>
 </head>
 <body>
@@ -177,28 +142,22 @@
 
 <div class="hud oculto" id="hud">
   <div class="marca caja"><div class="negro"><b>LA PERLA<sup>®</sup></b><span>Recorrido 3D · Prototipo 2</span></div><div class="cuadros"><i></i><i></i><i></i></div></div>
-  <button class="lugar caja tocable" id="lugar" aria-label="Ver información del lugar"><span class="punto"></span><span class="txt-l"><span id="lugarTxt">Acceso principal</span><small id="lugarSub">Av. Mariano Otero</small></span><span class="i">i</span></button>
+  <div class="lugar caja"><span class="punto" id="lugarPunto"></span><span class="txt-l"><span id="lugarTxt">Acceso Mariano Otero</span><small id="lugarSub">Planta baja</small></span></div>
   <div class="mini caja tocable">
     <canvas id="mini" aria-label="Minimapa"></canvas>
-    <div class="mini-pie"><span>Escala 1:<span id="escalaTxt"></span></span><button id="btnMapa">Mapa · M</button></div>
+    <div class="mini-pie"><span id="multTxt0">10× más rápido</span><button id="btnMapa">Mapa · M</button></div>
   </div>
   <div class="stats caja">
-    <div class="perlas"><span class="lbl">Perlas</span><b id="stPerlas">0/13</b></div>
+    <div class="estrellas"><span class="lbl">Estrellas</span><b id="stEstrellas">0/33</b></div>
     <div class="real"><span class="lbl">A pie serían</span><b id="stPie">0:00</b></div>
     <div><span class="lbl">Aquí llevas</span><b id="stAqui">0:00</b></div>
     <div class="real"><span class="lbl">Distancia real</span><b id="stReal">0 m</b></div>
-    <div><span class="lbl">Recorrido aquí</span><b id="stDist">0 m</b></div>
   </div>
   <div class="botones">
     <button class="bot caja tocable" id="btnNoche" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg><span class="txt">Ciudad de luces</span></button>
-    <button class="bot icono caja tocable" id="btnSonido" aria-pressed="true" aria-label="Sonido"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path id="ondas" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg></button>
     <button class="bot icono caja tocable" id="btnAyuda" aria-label="Controles">?</button>
   </div>
-  <article class="ficha caja tocable" id="ficha" aria-live="polite">
-    <button class="cerrar" id="fichaCerrar" aria-label="Cerrar">×</button>
-    <div class="ficha-top"><span class="ico" id="fichaIco"></span><div><p class="eyebrow" id="fichaCat"></p><h2 id="fichaNom"></h2></div></div>
-    <div class="ficha-cuerpo"><p class="desc" id="fichaDesc"></p><ul class="datos" id="fichaDatos"></ul></div>
-  </article>
+  <div class="jugar tocable" id="jugar"><span class="ico" id="jugarIco"></span><span class="txt"><small id="jugarZona"></small><b id="jugarTitulo"></b><em id="jugarEst"></em></span><button class="go" id="jugarBtn">▶ Jugar</button></div>
   <div class="aviso" id="aviso" role="status"></div>
 </div>
 <div class="joy" id="joy"><i></i></div>
@@ -209,11 +168,11 @@
     <div class="dentro">
       <p class="eyebrow">Prototipo 2 · Recorrido en primera persona</p>
       <h1>Camina La Perla</h1>
-      <p>Recorre la plaza a tu ritmo y encuentra las <b id="nPerlas">13</b> perlas. Cada una está en un área distinta y te cuenta qué hay ahí.</p>
-      <div class="escala"><span class="num">×<span id="multTxt">12</span></span><p>El recorrido está a escala 1:<span id="escalaTxt2"></span> y caminas unas <span id="multTxt2">12</span> veces más rápido que a pie. Verás en vivo cuánto te tomaría en la plaza real.</p></div>
+      <p>Entras por Mariano Otero. Recorre la plaza y busca los tótems de <b>▶ JUGAR</b>: cada experiencia tiene su minijuego y te da hasta 3 estrellas.</p>
+      <div class="escala"><span class="num">×<span id="multTxt">10</span></span><p>Caminas unas <span id="multTxt2">10</span> veces más rápido que a pie. Verás en vivo cuánto te tomaría en la plaza real.</p></div>
       <div class="controles" id="controles"></div>
       <div class="fila-btn"><button class="btn" id="btnComenzar" disabled>Cargando la plaza…</button></div>
-      <p class="muted" style="margin:18px 0 0;font-size:12px">Distribución ilustrativa · datos de cada zona de laperla.com.mx</p>
+      <p class="muted" style="margin:18px 0 0;font-size:12px">Trazo según el directorio oficial · ubicación de las experiencias por confirmar</p>
     </div>
   </div>
 </div>
@@ -221,7 +180,7 @@
 <div class="overlay" id="mapaGrande" hidden>
   <div class="tarjeta ancha">
     <div class="dentro">
-      <div class="mapa-head"><div><p class="eyebrow">Viaje rápido</p><h2 style="margin:0">Mapa de La Perla</h2></div><button class="bot icono caja" data-cerrar aria-label="Cerrar">×</button></div>
+      <div class="mapa-head"><div><p class="eyebrow">Viaje rápido</p><h2 style="margin:0">Ve directo a un juego</h2></div><button class="bot icono caja" data-cerrar aria-label="Cerrar">×</button></div>
       <canvas id="mapaCanvas"></canvas>
       <div class="lista" id="listaZonas"></div>
     </div>
@@ -231,12 +190,7 @@
 <div class="overlay" id="ayuda" hidden>
   <div class="tarjeta">
     <div class="cuadros-top"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-    <div class="dentro">
-      <p class="eyebrow">Controles</p>
-      <h2>Cómo moverte</h2>
-      <div class="controles" id="controles2"></div>
-      <div class="fila-btn"><button class="btn" data-cerrar>Seguir caminando</button></div>
-    </div>
+    <div class="dentro"><p class="eyebrow">Controles</p><h2>Cómo moverte</h2><div class="controles" id="controles2"></div><div class="fila-btn"><button class="btn" data-cerrar>Seguir caminando</button></div></div>
   </div>
 </div>
 
@@ -245,8 +199,8 @@
     <div class="cuadros-top"><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <div class="dentro">
       <p class="eyebrow">¡Recorrido completo!</p>
-      <h2>Encontraste todas las perlas</h2>
-      <p>Visitaste cada área de La Perla. Así se compara tu recorrido con la plaza real:</p>
+      <h2>Jugaste en todas las experiencias</h2>
+      <p>Así se compara tu recorrido con la plaza real:</p>
       <div class="resumen" id="resumen"></div>
       <div class="fila-btn"><button class="btn" data-cerrar>Seguir paseando</button></div>
     </div>
@@ -254,244 +208,53 @@
 </div>
 
 <script type="importmap">
-  { "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-  } }
+  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
 </script>
 <script src="datos-zonas.js"></script>
 <script>
-  // Si el motor 3D no carga (sin internet), avisamos en vez de quedarnos en "Cargando".
   setTimeout(function () {
     if (window.__perlaLista) return;
-    var b = document.getElementById('btnComenzar');
-    b.textContent = 'No se pudo cargar el motor 3D (requiere internet)';
+    document.getElementById('btnComenzar').textContent = 'No se pudo cargar el motor 3D (requiere internet)';
   }, 15000);
 </script>
 <script type="module">
 import * as THREE from 'three';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { crearPlaza, X, Z, MUNDO } from './escena.js';
+import { abrirMinijuego, JUEGOS } from './minijuegos.js';
 
 const D = window.LA_PERLA;
-const CFG = {
-  escala: 2,        // 1 m del recorrido = 2 m de la plaza real
-  vel: 8,           // m/s caminando en el recorrido
-  velCorrer: 14,    // m/s corriendo
-  pie: 1.35,        // m/s de una persona caminando en la vida real
-  ojos: 1.7,
-  radio: 0.6,
-  giro: 1.9,
-};
-const X = (x) => x - 120;
-const Z = (y) => y - 80;
 const $ = (id) => document.getElementById(id);
+const tactil = matchMedia('(pointer: coarse)').matches;
+const CFG = { vel: 8, velCorrer: 14, ojos: 1.7, mPorUnidad: 1.75, pie: 1.35, radioPx: 3, giro: 1.9 };
+const PX = 1 / MUNDO.S; // píxeles de plano por unidad 3D
 const lerp = (a, b, t) => a + (b - a) * t;
 const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 const metros = (m) => (m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${Math.round(m)} m`);
-const tactil = matchMedia('(pointer: coarse)').matches;
+const icono = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="${D.ICONOS[n]}"/></svg>`;
+const guardado = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sin almacenamiento */ } },
+};
 
 /* ======================= Motor ======================= */
 const canvas = $('escena');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-const tactilMovil = matchMedia('(pointer: coarse)').matches;
-renderer.setPixelRatio(Math.min(devicePixelRatio, tactilMovil ? 1.5 : 1.75));
-renderer.setSize(innerWidth, innerHeight, false);
+renderer.setPixelRatio(Math.min(devicePixelRatio, tactil ? 1.5 : 1.75));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
-const scene = new THREE.Scene();
-scene.fog = new THREE.Fog('#e9dccb', 90, 420);
-const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 900);
+const plaza = crearPlaza(D, { modo: 'fps', movil: tactil });
+const scene = plaza.scene;
+plaza.niveles.forEach((g) => { g.visible = true; });
+scene.fog = new THREE.Fog('#e9f2ff', 70, 320);
+const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 900);
 camera.rotation.order = 'YXZ';
 
-const pmrem = new THREE.PMREMGenerator(renderer);
-const entorno = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
-
-try {
-  await Promise.race([
-    Promise.all(['800 64px Montserrat', '700 44px Montserrat', '600 30px Montserrat'].map((f) => document.fonts.load(f))),
-    new Promise((r) => setTimeout(r, 3000)),
-  ]);
-} catch (e) { /* seguimos con la fuente del sistema */ }
-
-/* ======================= Texturas ======================= */
-const ANISO = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-function lienzo(w, h, dibujar, repetir) {
-  const c = document.createElement('canvas');
-  c.width = w; c.height = h;
-  dibujar(c.getContext('2d'), w, h);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = ANISO;
-  if (repetir) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(repetir[0], repetir[1]); }
-  return t;
-}
-function motas(ctx, w, h, n, colores, tam = 2) {
-  for (let i = 0; i < n; i++) { ctx.fillStyle = colores[i % colores.length]; ctx.fillRect(Math.random() * w, Math.random() * h, tam, tam); }
-}
-function redondo(ctx, x, y, w, h, r) {
-  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
-}
-
-const texPiso = lienzo(256, 256, (ctx, w, h) => {
-  ctx.fillStyle = '#bab3a7'; ctx.fillRect(0, 0, w, h);
-  motas(ctx, w, h, 1400, ['#aea69a', '#c4bdb2', '#b3ac9f'], 2);
-  ctx.strokeStyle = '#a0998d'; ctx.lineWidth = 2;
-  for (let i = 0; i <= 4; i++) {
-    ctx.beginPath(); ctx.moveTo(i * 64, 0); ctx.lineTo(i * 64, h); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, i * 64); ctx.lineTo(w, i * 64); ctx.stroke();
-  }
-}, [59, 39.5]);
-const texAdoquin = lienzo(256, 256, (ctx, w, h) => {
-  ctx.fillStyle = '#7d5f47'; ctx.fillRect(0, 0, w, h);
-  const tonos = ['#c49a74', '#b98d68', '#cfa57d', '#ad8360'];
-  for (let r = 0; r < 8; r++) for (let c = -1; c < 5; c++) {
-    ctx.fillStyle = tonos[(r * 7 + c * 3 + 16) % 4];
-    ctx.fillRect(c * 64 + (r % 2) * 32 + 2, r * 32 + 2, 60, 28);
-  }
-  motas(ctx, w, h, 500, ['rgba(0,0,0,.08)', 'rgba(255,255,255,.08)'], 2);
-}, [0.9, 0.9]);
-const texPasto = lienzo(256, 256, (ctx, w, h) => {
-  ctx.fillStyle = '#5b8f4e'; ctx.fillRect(0, 0, w, h);
-  motas(ctx, w, h, 4000, ['#4f8444', '#68a05a', '#578b4a', '#73a862'], 2);
-}, [1, 1]);
-function pasto(rx, ry) { const t = texPasto.clone(); t.repeat.set(rx, ry); t.needsUpdate = true; return t; }
-const texMadera = lienzo(256, 256, (ctx, w, h) => {
-  for (let i = 0; i < 8; i++) {
-    ctx.fillStyle = ['#b98a5c', '#a87a4e', '#c49568', '#b3845a'][i % 4];
-    ctx.fillRect(0, i * 32, w, 31);
-    ctx.fillStyle = 'rgba(60,35,15,.35)'; ctx.fillRect(0, i * 32 + 31, w, 1);
-  }
-  motas(ctx, w, h, 600, ['rgba(80,50,25,.15)'], 3);
-}, [3, 3]);
-const texCancha = lienzo(1100, 1000, (ctx, w, h) => {
-  const m = 50; // px por metro
-  ctx.fillStyle = '#6a57a6'; ctx.fillRect(0, 0, w, h);
-  ctx.fillStyle = '#5a4893'; ctx.fillRect(m * 6.55, 0, m * 8.9, m * 5.8);
-  ctx.strokeStyle = '#f4f1ff'; ctx.lineWidth = 6;
-  ctx.strokeRect(m * .5, m * .5, w - m, h - m);
-  ctx.strokeRect(m * 8.55, m * .5, m * 4.9, m * 5.8);
-  ctx.beginPath(); ctx.arc(m * 11, m * 6.3, m * 1.8, 0, Math.PI * 2); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(m * 4.25, m * .5); ctx.lineTo(m * 4.25, m * 2.1);
-  ctx.arc(m * 11, m * 2.1, m * 6.75, Math.PI, 0, true); ctx.lineTo(m * 17.75, m * .5); ctx.stroke();
-  ctx.font = '800 64px Montserrat'; ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.textAlign = 'center';
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '14px';
-  ctx.fillText('LA PERLA', w / 2, h - m * 3);
-});
-const texTapete = lienzo(1024, 832, (ctx, w, h) => {
-  ctx.fillStyle = '#e58aa8'; ctx.fillRect(0, 0, w, h);
-  [[150, 140, 110, '#7cc4f3'], [820, 160, 90, '#f7d26a'], [860, 640, 130, '#9be3b4'], [200, 650, 80, '#cfc4ef'], [520, 420, 70, '#f7d26a']]
-    .forEach(([x, y, r, c]) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); });
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 8;
-  for (let i = 0; i < 6; i++) ctx.strokeRect(380 + (i % 2) * 70, 560 - i * 70, 70, 70);
-});
-const texBrillo = lienzo(128, 128, (ctx, w, h) => {
-  const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-  g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.25, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-});
-const texHaz = lienzo(8, 256, (ctx, w, h) => {
-  const g = ctx.createLinearGradient(0, 0, 0, h);
-  g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(255,255,255,1)');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-});
-const texFachada = lienzo(128, 256, (ctx, w, h) => {
-  ctx.fillStyle = '#9097a6'; ctx.fillRect(0, 0, w, h);
-  for (let y = 10; y < h - 10; y += 24) for (let x = 10; x < w - 10; x += 22) { ctx.fillStyle = '#4a5160'; ctx.fillRect(x, y, 14, 15); }
-});
-const texFachadaLuz = lienzo(128, 256, (ctx, w, h) => {
-  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
-  for (let y = 10; y < h - 10; y += 24) for (let x = 10; x < w - 10; x += 22) {
-    if (Math.random() < .45) { ctx.fillStyle = Math.random() < .7 ? '#ffd9a0' : '#cfe3ff'; ctx.fillRect(x, y, 14, 15); }
-  }
-});
-
-/* ======================= Materiales ======================= */
-const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: .7, ...extra });
-const mat = {
-  piso: std('#ffffff', { map: texPiso, roughness: .95 }),
-  afuera: std('#8a867d', { roughness: 1 }),
-  asfalto: std('#2d2e33', { roughness: .92 }),
-  banqueta: std('#b3ada2', { roughness: .95 }),
-  adoquin: std('#ffffff', { map: texAdoquin, roughness: .9 }),
-  muro: std('#e6e0d6', { roughness: .85 }),
-  muroOscuro: std('#2a2a31', { roughness: .6 }),
-  vidrio: std('#26323f', { roughness: .08, metalness: .65, emissive: '#ffcf96', emissiveIntensity: .15, envMap: entorno, envMapIntensity: 1 }),
-  madera: std('#ffffff', { map: texMadera, roughness: .8 }),
-  maderaClara: std('#d8b48a', { roughness: .7 }),
-  maderaOscura: std('#8a6240', { roughness: .8 }),
-  concreto: std('#9fa1a8', { roughness: .9 }),
-  concretoRampa: std('#c9cbd1', { roughness: .65 }),
-  metal: std('#3b3e46', { roughness: .4, metalness: .6 }),
-  blanco: std('#f4f2ee', { roughness: .6 }),
-  lavanda: std('#9c8bc7', { roughness: .45 }),
-  agua: std('#3f9fd2', { roughness: .05, metalness: .3, transparent: true, opacity: .9, envMap: entorno }),
-  piedra: std('#d8d2c6', { roughness: .8 }),
-  tronco: std('#6b4c35', { roughness: .9 }),
-  copa: std('#ffffff', { roughness: .85, flatShading: true }),
-  llanta: std('#151517', { roughness: .8 }),
-};
-const basico = (color, extra = {}) => new THREE.MeshBasicMaterial({ color, toneMapped: false, ...extra });
-
-/* ======================= Ayudantes ======================= */
-function malla(geo, material, x = 0, y = 0, z = 0, padre = scene, sombra = true) {
-  const m = new THREE.Mesh(geo, material);
-  m.position.set(x, y, z);
-  if (sombra) { m.castShadow = true; m.receiveShadow = true; }
-  padre.add(m);
-  return m;
-}
-const caja = (w, h, d, material, x, y, z, padre) => malla(new THREE.BoxGeometry(w, h, d), material, x, y, z, padre);
-function sueloRect(x, y, w, h, material, alto = 0.03) {
-  const g = new THREE.PlaneGeometry(w, h); g.rotateX(-Math.PI / 2);
-  const m = new THREE.Mesh(g, material);
-  m.position.set(X(x + w / 2), alto, Z(y + h / 2)); m.receiveShadow = true; scene.add(m);
-  return m;
-}
-function ajustarTexto(ctx, texto, maxW, tam, peso) {
-  let t = tam;
-  ctx.font = `${peso} ${t}px Montserrat, sans-serif`;
-  while (ctx.measureText(texto).width > maxW && t > 10) { t -= 2; ctx.font = `${peso} ${t}px Montserrat, sans-serif`; }
-  return t;
-}
-function letrero(texto, ancho, alto, { color = '#ffffff', fondo = null, peso = 800, sub = null, subColor = '#cfc4ef', espacio = 0 } = {}) {
-  const ppm = 96;
-  const W = Math.min(2048, Math.round(ancho * ppm)), H = Math.min(1024, Math.round(alto * ppm));
-  const tex = lienzo(W, H, (ctx) => {
-    if (fondo) { ctx.fillStyle = fondo; ctx.fillRect(0, 0, W, H); }
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    if ('letterSpacing' in ctx) ctx.letterSpacing = `${espacio}px`;
-    ajustarTexto(ctx, texto, W * .88, H * (sub ? .46 : .62), peso);
-    ctx.fillStyle = color; ctx.fillText(texto, W / 2, sub ? H * .38 : H * .53);
-    if (sub) {
-      if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
-      ajustarTexto(ctx, sub, W * .88, H * .2, 700);
-      ctx.fillStyle = subColor; ctx.fillText(sub, W / 2, H * .76);
-    }
-  });
-  return new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto), basico('#ffffff', { map: tex, transparent: !fondo }));
-}
-
-/* ======================= Colisiones (coordenadas de mapa) ======================= */
-const cajasCol = [];
-const circulosCol = [];
-const bloquear = (x1, y1, x2, y2) => cajasCol.push({ x1: Math.min(x1, x2), y1: Math.min(y1, y2), x2: Math.max(x1, x2), y2: Math.max(y1, y2) });
-function choca(x, y) {
-  const r = CFG.radio;
-  if (x < 1.5 || x > 238.5 || y < 1.5 || y > 159.4) return true;
-  for (const c of cajasCol) if (x > c.x1 - r && x < c.x2 + r && y > c.y1 - r && y < c.y2 + r) return true;
-  for (const c of circulosCol) if ((x - c.x) ** 2 + (y - c.y) ** 2 < (c.r + r) ** 2) return true;
-  return false;
-}
-
-/* ======================= Cielo, luz y suelo ======================= */
+// Cielo
 const cieloMat = new THREE.ShaderMaterial({
   uniforms: { arriba: { value: new THREE.Color() }, abajo: { value: new THREE.Color() } },
-  vertexShader: `
-    varying vec3 vDir;
-    void main() { vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  vertexShader: `varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: `
     uniform vec3 arriba; uniform vec3 abajo; varying vec3 vDir;
     void main() {
@@ -502,589 +265,50 @@ const cieloMat = new THREE.ShaderMaterial({
   side: THREE.BackSide, depthWrite: false, toneMapped: false, fog: false,
 });
 const cielo = new THREE.Mesh(new THREE.SphereGeometry(800, 32, 16), cieloMat);
-cielo.renderOrder = -1;
 scene.add(cielo);
 
-const estrellasGeo = new THREE.BufferGeometry();
-{
-  const p = [];
-  for (let i = 0; i < 700; i++) {
-    const a = Math.random() * Math.PI * 2, e = .12 + Math.random() * 1.3;
-    p.push(Math.cos(a) * Math.cos(e) * 700, Math.sin(e) * 700, Math.sin(a) * Math.cos(e) * 700);
-  }
-  estrellasGeo.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+// Letreros de tiendas (planta baja) y pines de experiencias
+function lienzo(w, h, dibujar) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  dibujar(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
-const estrellas = new THREE.Points(estrellasGeo, new THREE.PointsMaterial({ color: '#ffffff', size: 1.6, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false }));
-scene.add(estrellas);
-
-const hemi = new THREE.HemisphereLight('#e2ebff', '#7a6a55', 1.1);
-scene.add(hemi);
-const sol = new THREE.DirectionalLight('#fff0d8', 2.6);
-sol.position.set(-90, 140, 70);
-sol.castShadow = true;
-sol.shadow.mapSize.set(tactilMovil ? 1024 : 2048, tactilMovil ? 1024 : 2048);
-Object.assign(sol.shadow.camera, { left: -150, right: 150, top: 125, bottom: -125, near: 20, far: 420 });
-sol.shadow.bias = -0.0005;
-sol.shadow.normalBias = 0.04;
-scene.add(sol, sol.target);
-
-// Suelo exterior, sitio y avenida
-const sueloAfuera = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600).rotateX(-Math.PI / 2), mat.afuera);
-sueloAfuera.position.y = -0.05; sueloAfuera.receiveShadow = true; scene.add(sueloAfuera);
-sueloRect(2, 2, 236, 158, mat.piso, 0);
-sueloRect(-680, 161.2, 1600, 1.6, mat.banqueta, 0.02);
-sueloRect(-680, 162.8, 1600, 13.4, mat.asfalto, 0.01);
-sueloRect(-680, 176.2, 1600, 5, mat.banqueta, 0.02);
-caja(240, .18, .25, mat.piedra, X(120), .09, Z(160.6));
-{
-  const raya = new THREE.InstancedMesh(new THREE.BoxGeometry(3, .02, .18), basico('#d9d6cc'), 200);
-  const m4 = new THREE.Matrix4();
-  for (let i = 0; i < 200; i++) { m4.makeTranslation(-800 + i * 8, .03, Z(169.5)); raya.setMatrixAt(i, m4); }
-  scene.add(raya);
-}
-
-/* ======================= Calzada La Perla ======================= */
-const calzada = D.zona('calzada');
-{
-  const s = new THREE.Shape(calzada.forma.puntos.map(([x, y]) => new THREE.Vector2(X(x), -Z(y))));
-  const g = new THREE.ShapeGeometry(s); g.rotateX(-Math.PI / 2);
-  const m = new THREE.Mesh(g, mat.adoquin); m.position.y = .03; m.receiveShadow = true; scene.add(m);
-}
-// Puestos de comida
-D.puestos.forEach((p) => {
-  const g = new THREE.Group();
-  g.position.set(X(p.pos[0]), 0, Z(p.pos[1]));
-  g.rotation.y = p.pos[0] < 122 ? Math.PI / 2 : -Math.PI / 2; // el frente mira al centro de la calzada
-  const color = std(p.color, { roughness: .55 });
-  caja(3, 2.3, 2.6, mat.maderaOscura, 0, 1.15, -.2, g);
-  caja(3.1, .9, .5, color, 0, .45, 1.2, g);
-  caja(3.1, .08, .7, mat.maderaClara, 0, .95, 1.25, g);
-  const toldo = caja(3.5, .1, 1.8, color, 0, 2.6, .9, g); toldo.rotation.x = .28;
-  caja(3.3, .5, .08, mat.blanco, 0, 2.05, 1.12, g);
-  caja(3.4, .25, 3, color, 0, 2.45, -.2, g);
-  scene.add(g);
-  bloquear(p.pos[0] - 1.6, p.pos[1] - 1.6, p.pos[0] + 1.6, p.pos[1] + 1.6);
-});
-// Mesas con sombrilla
-D.mesas.forEach(([x, y], i) => {
-  const g = new THREE.Group(); g.position.set(X(x), 0, Z(y)); scene.add(g);
-  malla(new THREE.CylinderGeometry(.6, .6, .06, 20), mat.blanco, 0, .76, 0, g);
-  malla(new THREE.CylinderGeometry(.05, .05, 2.4, 8), mat.metal, 0, 1.2, 0, g);
-  malla(new THREE.ConeGeometry(1.6, .6, 10), std(['#ff6b2c', '#3d6bff', '#ff5fa2', '#1fb36b', '#ffc31f'][i % 5]), 0, 2.45, 0, g);
-  for (let k = 0; k < 4; k++) {
-    const a = k * Math.PI / 2 + .4;
-    malla(new THREE.CylinderGeometry(.22, .22, .45, 12), mat.maderaClara, Math.cos(a) * 1.05, .23, Math.sin(a) * 1.05, g);
-  }
-  circulosCol.push({ x, y, r: .7 });
-});
-
-// Luces colgantes: postes, cables y focos
-const focosPos = [];
-{
-  const postes = new Map();
-  const cable = [];
-  D.luces.forEach(([x1, y1, x2, y2]) => {
-    postes.set(`${x1},${y1}`, [x1, y1]); postes.set(`${x2},${y2}`, [x2, y2]);
-    const len = Math.hypot(x2 - x1, y2 - y1);
-    const n = Math.round(len / 1.2);
-    let prev = null;
-    for (let k = 0; k <= n; k++) {
-      const t = k / n;
-      const p = new THREE.Vector3(X(lerp(x1, x2, t)), 5.3 - 0.9 * 4 * t * (1 - t), Z(lerp(y1, y2, t)));
-      if (prev) cable.push(prev, p);
-      if (k > 0 && k < n) focosPos.push(p.clone().add(new THREE.Vector3(0, -.12, 0)));
-      prev = p;
-    }
+const letreros = [];
+D.NIVELES[0].tiendas.forEach((t) => {
+  if (!t.nombre) return;
+  const color = D.CATEGORIAS[t.cat].color;
+  const tex = lienzo(512, 96, (ctx, W, H) => {
+    ctx.font = '800 44px Montserrat, sans-serif';
+    const w = Math.min(W - 8, ctx.measureText(t.nombre).width + 70);
+    const x0 = (W - w) / 2;
+    ctx.fillStyle = '#141414'; ctx.fillRect(x0 + 6, 10, w, 80);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(x0, 4, w, 80);
+    ctx.lineWidth = 5; ctx.strokeStyle = '#141414'; ctx.strokeRect(x0, 4, w, 80);
+    ctx.fillStyle = color; ctx.fillRect(x0 + 14, 30, 26, 26); ctx.strokeRect(x0 + 14, 30, 26, 26);
+    ctx.fillStyle = '#141414'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(t.nombre, x0 + 52, 46, w - 62);
   });
-  const posteGeo = new THREE.CylinderGeometry(.07, .09, 5.5, 8);
-  const postesMesh = new THREE.InstancedMesh(posteGeo, mat.metal, postes.size);
-  const m4 = new THREE.Matrix4();
-  [...postes.values()].forEach(([x, y], i) => { m4.makeTranslation(X(x), 2.75, Z(y)); postesMesh.setMatrixAt(i, m4); });
-  postesMesh.castShadow = true; scene.add(postesMesh);
-  scene.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(cable), new THREE.LineBasicMaterial({ color: '#2a2622' })));
-}
-const focoMat = basico('#e9d9b0');
-const focos = new THREE.InstancedMesh(new THREE.SphereGeometry(.09, 8, 6), focoMat, focosPos.length);
-{
-  const m4 = new THREE.Matrix4();
-  focosPos.forEach((p, i) => { m4.makeTranslation(p.x, p.y, p.z); focos.setMatrixAt(i, m4); });
-  scene.add(focos);
-}
-const brilloFocos = new THREE.Points(
-  new THREE.BufferGeometry().setFromPoints(focosPos),
-  new THREE.PointsMaterial({ map: texBrillo, color: '#ffd38a', size: 1.05, transparent: true, opacity: .1, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }),
-);
-scene.add(brilloFocos);
-
-/* ======================= Edificios ======================= */
-const NORMAL = { E: [1, 0, Math.PI / 2], W: [-1, 0, -Math.PI / 2], S: [0, 1, 0], N: [0, -1, Math.PI] };
-const MARCAS = {
-  liverpool: [['Liverpool', '#ffffff']],
-  moda: [['ZARA', '#ffffff'], ['BERSHKA', '#ffffff'], ['PULL&BEAR', '#ffffff'], ['STRADIVARIUS', '#ffffff']],
-  moda2: [['H&M', '#ff5b5b'], ['ADIDAS', '#ffffff'], ['COPPEL', '#ffd34a'], ['GANDHI', '#ffffff']],
-  mercado: [['MERCADO LA PERLA', '#f0b44c']],
-  cinepolis: [['CINÉPOLIS', '#ffffff']],
-};
-function edificio(z) {
-  const f = z.forma, e = z.edificio;
-  const cx = X(f.x + f.w / 2), cz = Z(f.y + f.h / 2);
-  caja(f.w, e.alto, f.h, mat.muro, cx, e.alto / 2, cz);
-  caja(f.w + .6, .7, f.h + .6, mat.muroOscuro, cx, e.alto + .1, cz);
-  caja(f.w + .3, .35, f.h + .3, mat.muroOscuro, cx, 7.4, cz);
-  // equipos en azotea
-  for (let i = 0; i < 3; i++) caja(3, 1.4, 2.2, mat.concreto, cx - f.w / 3 + i * (f.w / 3), e.alto + 1.1, cz + (i % 2 ? 3 : -4));
-  bloquear(f.x, f.y, f.x + f.w, f.y + f.h);
-
-  const [nx, nz, rot] = NORMAL[e.frente];
-  const largo = nx ? f.h : f.w;
-  const fachada = new THREE.Group();
-  fachada.position.set(cx + nx * (f.w / 2), 0, cz + nz * (f.h / 2));
-  fachada.rotation.y = rot;
-  scene.add(fachada);
-  caja(largo - 4, 5.6, .3, mat.vidrio, 0, 3.0, .15, fachada);
-  for (let u = -largo / 2 + 2; u <= largo / 2 - 2 + .01; u += 3) caja(.18, 5.6, .45, mat.muroOscuro, u, 3.0, .2, fachada);
-  caja(largo - 2, .3, 2.6, mat.muroOscuro, 0, 6.0, 1.3, fachada);
-  const marcas = MARCAS[z.id];
-  const tramo = (largo - 6) / marcas.length;
-  marcas.forEach(([t, c], i) => {
-    const alto = z.id === 'liverpool' || z.id === 'cinepolis' ? 3.2 : 1.6;
-    const l = letrero(t, Math.min(tramo - 1, z.id === 'mercado' ? 22 : 14), alto, { color: c, espacio: z.id === 'liverpool' ? 2 : 6 });
-    l.position.set(-largo / 2 + 3 + tramo * (i + .5), z.id === 'liverpool' ? e.alto - 4 : z.id === 'cinepolis' ? 9.4 : 6.95, .3);
-    fachada.add(l);
-  });
-  return fachada;
-}
-['liverpool', 'moda', 'moda2', 'mercado', 'cinepolis'].forEach((id) => {
-  const f = edificio(D.zona(id));
-  if (id === 'cinepolis') {
-    const pantalla = letrero('ESTRENOS', 18, 6, { fondo: '#1a1426', color: '#ff7a6b', sub: 'NIVEL 2 · CARTELERA DE LA SEMANA', subColor: '#ffffff', espacio: 10 });
-    pantalla.position.set(0, 14.5, .12); f.add(pantalla);
-    caja(19, 7, .2, mat.muroOscuro, 0, 14.5, -.01, f);
-  }
-  if (id === 'mercado') {
-    // terraza con sombrillas frente al mercado
-    [[178.5, 74], [178.5, 110]].forEach(([x, y]) => {
-      malla(new THREE.CylinderGeometry(.6, .6, .06, 20), mat.blanco, X(x), .76, Z(y));
-      malla(new THREE.CylinderGeometry(.05, .05, 2.4, 8), mat.metal, X(x), 1.2, Z(y));
-      malla(new THREE.ConeGeometry(1.5, .55, 10), std('#ff9f1c'), X(x), 2.45, Z(y));
-      circulosCol.push({ x, y, r: .7 });
-    });
-  }
-});
-
-/* ======================= El Jardín ======================= */
-const FX = X(84), FZ = Z(88);
-{
-  const g = new THREE.CircleGeometry(20, 64); g.rotateX(-Math.PI / 2);
-  const m = new THREE.Mesh(g, std('#ffffff', { map: pasto(8, 8), roughness: 1 })); m.position.set(FX, .03, FZ); m.receiveShadow = true; scene.add(m);
-  const a = new THREE.RingGeometry(12, 14.5, 72); a.rotateX(-Math.PI / 2);
-  const ar = new THREE.Mesh(a, mat.adoquin); ar.position.set(FX, .05, FZ); ar.receiveShadow = true; scene.add(ar);
-  sueloRect(98, 86, 14, 4, mat.adoquin, .05);
-  malla(new THREE.CylinderGeometry(4.6, 4.9, .7, 48), mat.piedra, FX, .35, FZ);
-  malla(new THREE.CircleGeometry(4.2, 48).rotateX(-Math.PI / 2), mat.agua, FX, .62, FZ, scene, false);
-  malla(new THREE.CylinderGeometry(.22, .35, 1.0, 16), mat.piedra, FX, .9, FZ);
-  circulosCol.push({ x: 84, y: 88, r: 5 });
-  // camas de flores
-  const flores = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.32, 0), std('#ffffff', { roughness: .8 }), 6 * 14);
-  const m4 = new THREE.Matrix4(); const col = new THREE.Color(); let k = 0;
-  for (let i = 0; i < 6; i++) {
-    const a0 = (i / 6) * Math.PI * 2 + .5;
-    for (let j = 0; j < 14; j++) {
-      const r = Math.random() * 1.6, b = Math.random() * Math.PI * 2;
-      m4.makeTranslation(FX + Math.cos(a0) * 8.5 + Math.cos(b) * r, .3 + Math.random() * .2, FZ + Math.sin(a0) * 8.5 + Math.sin(b) * r);
-      flores.setMatrixAt(k, m4);
-      flores.setColorAt(k++, col.set(['#ff5fa2', '#ffc31f', '#a259ff', '#ff6b2c', '#ffffff'][j % 5]));
-    }
-  }
-  flores.castShadow = true; scene.add(flores);
-  // bancas sobre el anillo
-  for (let i = 0; i < 6; i++) {
-    const a0 = (i / 6) * Math.PI * 2 + 1.05;
-    const b = new THREE.Group();
-    b.position.set(FX + Math.cos(a0) * 11.2, 0, FZ + Math.sin(a0) * 11.2);
-    b.rotation.y = -a0 + Math.PI / 2;
-    caja(2.4, .12, .6, mat.maderaClara, 0, .48, 0, b);
-    caja(2.4, .5, .1, mat.maderaClara, 0, .8, -.3, b);
-    caja(.12, .45, .5, mat.metal, -1, .22, 0, b); caja(.12, .45, .5, mat.metal, 1, .22, 0, b);
-    scene.add(b);
-  }
-}
-// Fuente: partículas de agua
-const NAGUA = 480;
-const aguaPos = new Float32Array(NAGUA * 3), aguaVel = new Float32Array(NAGUA * 3);
-function chorro(i, t) {
-  const a = Math.random() * Math.PI * 2, r = Math.random() * .75;
-  const vx = Math.cos(a) * r, vy = 7.6 + Math.random() * 1.8, vz = Math.sin(a) * r;
-  aguaPos[i * 3] = FX + vx * t; aguaPos[i * 3 + 1] = 1.3 + vy * t - 4.9 * t * t; aguaPos[i * 3 + 2] = FZ + vz * t;
-  aguaVel[i * 3] = vx; aguaVel[i * 3 + 1] = vy - 9.8 * t; aguaVel[i * 3 + 2] = vz;
-}
-for (let i = 0; i < NAGUA; i++) chorro(i, Math.random() * 1.7);
-const aguaGeo = new THREE.BufferGeometry();
-aguaGeo.setAttribute('position', new THREE.BufferAttribute(aguaPos, 3));
-const fuente = new THREE.Points(aguaGeo, new THREE.PointsMaterial({ map: texBrillo, color: '#d6f3ff', size: .42, transparent: true, opacity: .9, depthWrite: false, toneMapped: false }));
-fuente.frustumCulled = false;
-scene.add(fuente);
-
-/* ======================= Club Canino ======================= */
-{
-  sueloRect(12, 82, 40, 30, std('#ffffff', { map: pasto(10, 7.5), roughness: 1 }), .03);
-  const tramos = [[12.8, 82.8, 51.2, 82.8], [12.8, 82.8, 12.8, 111.2], [12.8, 111.2, 51.2, 111.2], [51.2, 82.8, 51.2, 94], [51.2, 100, 51.2, 111.2]];
-  const postes = []; const cerca = std('#f4f2ee', { roughness: .6 });
-  tramos.forEach(([x1, y1, x2, y2]) => {
-    const len = Math.hypot(x2 - x1, y2 - y1);
-    const n = Math.round(len / 2.4);
-    for (let i = 0; i <= n; i++) postes.push([lerp(x1, x2, i / n), lerp(y1, y2, i / n)]);
-    [.45, 1.0].forEach((h) => {
-      const r = caja(x1 === x2 ? .08 : len, .08, x1 === x2 ? len : .08, cerca, X((x1 + x2) / 2), h, Z((y1 + y2) / 2));
-      r.castShadow = false;
-    });
-    bloquear(x1 - .15, y1 - .15, x2 + .15, y2 + .15);
-  });
-  const pm = new THREE.InstancedMesh(new THREE.BoxGeometry(.14, 1.2, .14), cerca, postes.length);
-  const m4 = new THREE.Matrix4();
-  postes.forEach(([x, y], i) => { m4.makeTranslation(X(x), .6, Z(y)); pm.setMatrixAt(i, m4); });
-  pm.castShadow = true; scene.add(pm);
-  [[20, 89], [26, 89], [44, 104]].forEach(([x, y]) => {
-    caja(.1, .9, .1, mat.blanco, X(x - 1.6), .45, Z(y)); caja(.1, .9, .1, mat.blanco, X(x + 1.6), .45, Z(y));
-    caja(3.2, .08, .08, std('#ff9f1c'), X(x), .6, Z(y));
-  });
-  const tunel = malla(new THREE.CylinderGeometry(.8, .8, 4, 20, 1, true, 0, Math.PI), std('#a259ff', { side: THREE.DoubleSide }), X(42), 0, Z(88));
-  tunel.rotation.z = Math.PI / 2;
-  const casa = new THREE.Group(); casa.position.set(X(18), 0, Z(103.7)); scene.add(casa);
-  caja(4.2, 2.2, 3.4, mat.maderaOscura, 0, 1.1, 0, casa);
-  const t1 = caja(4.6, .15, 2.3, std('#b85c4a'), 0, 2.75, .82, casa); t1.rotation.x = .62;
-  const t2 = caja(4.6, .15, 2.3, std('#b85c4a'), 0, 2.75, -.82, casa); t2.rotation.x = -.62;
-  caja(1.2, 1.3, .1, std('#2a1d14'), 0, .65, 1.71, casa);
-  bloquear(15.7, 101.8, 20.3, 105.6);
-  const l = letrero('CLUB CANINO', 3.6, .7, { fondo: '#2a4a33', color: '#ffffff', espacio: 4 });
-  l.position.set(X(51.4), 1.6, Z(102.4)); l.rotation.y = Math.PI / 2; scene.add(l);
-}
-// Perritos que pasean
-function perrito(color) {
-  const g = new THREE.Group();
-  const c = std(color, { roughness: .8 });
-  caja(1, .42, .4, c, 0, .58, 0, g);
-  caja(.38, .36, .34, c, .58, .82, 0, g);
-  caja(.2, .15, .2, c, .82, .76, 0, g);
-  caja(.08, .16, .08, std('#222'), .56, 1.04, .12, g); caja(.08, .16, .08, std('#222'), .56, 1.04, -.12, g);
-  const cola = caja(.38, .08, .08, c, -.62, .78, 0, g); cola.rotation.z = .7;
-  const patas = [[.36, .14], [.36, -.14], [-.36, .14], [-.36, -.14]].map(([x, z]) => {
-    const p = new THREE.Group(); p.position.set(x, .4, z); g.add(p);
-    caja(.1, .4, .1, c, 0, -.2, 0, p);
-    return p;
-  });
-  scene.add(g);
-  return { g, patas, cola };
-}
-const perritos = [
-  { ...perrito('#c8955c'), cx: 30, cy: 96, r: 6, w: .55, f: 0 },
-  { ...perrito('#f2efe8'), cx: 40, cy: 100, r: 4, w: -.8, f: 2 },
-  { ...perrito('#3a3330'), cx: 24, cy: 95, r: 3, w: .9, f: 4 },
-];
-
-/* ======================= Las Rampas ======================= */
-function cuartoTubo(R, plataforma, ancho) {
-  const s = new THREE.Shape();
-  s.moveTo(0, 0); s.lineTo(R + plataforma, 0); s.lineTo(R + plataforma, R); s.lineTo(R, R);
-  s.absarc(0, R, R, 0, -Math.PI / 2, true);
-  const g = new THREE.ExtrudeGeometry(s, { depth: ancho, bevelEnabled: false, curveSegments: 18 });
-  g.translate(0, 0, -ancho / 2);
-  return g;
-}
-{
-  sueloRect(14, 122, 38, 28, std('#8f929b', { roughness: .85 }), .03);
-  const R = 3.2, P = 1.4, A = 23;
-  const oeste = malla(cuartoTubo(R, P, A), mat.concretoRampa, X(14.4 + R + P), 0, Z(136)); oeste.rotation.y = Math.PI;
-  const este = malla(cuartoTubo(R, P, A), mat.concretoRampa, X(51.6 - R - P), 0, Z(136));
-  [[14.4 + P, -1], [51.6 - P, 1]].forEach(([x]) => {
-    const cop = malla(new THREE.CylinderGeometry(.08, .08, A, 10), mat.lavanda, X(x), R, Z(136)); cop.rotation.x = Math.PI / 2;
-  });
-  bloquear(14.4, 124.5, 14.4 + R + P - .3, 147.5);
-  bloquear(51.6 - R - P + .3, 124.5, 51.6, 147.5);
-  // funbox
-  caja(8, .9, 5, std('#6b7086', { roughness: .6 }), X(33), .45, Z(144));
-  const cuna = new THREE.Shape(); cuna.moveTo(0, 0); cuna.lineTo(2.6, 0); cuna.lineTo(0, .9);
-  const cunaGeo = new THREE.ExtrudeGeometry(cuna, { depth: 5, bevelEnabled: false }); cunaGeo.translate(0, 0, -2.5);
-  malla(cunaGeo, std('#7a8098'), X(37), 0, Z(144));
-  const c2 = malla(cunaGeo, std('#7a8098'), X(29), 0, Z(144)); c2.rotation.y = Math.PI;
-  bloquear(26.6, 141.6, 39.4, 146.4);
-  // riel
-  const riel = malla(new THREE.CylinderGeometry(.05, .05, 16, 8), mat.lavanda, X(33), .55, Z(129)); riel.rotation.z = Math.PI / 2;
-  [-7.5, 0, 7.5].forEach((dx) => caja(.08, .5, .08, mat.metal, X(33 + dx), .25, Z(129)));
-}
-
-/* ======================= La Cancha ======================= */
-{
-  sueloRect(60, 120, 40, 30, std('#3f4352', { roughness: .9 }), .03);
-  sueloRect(69, 122, 22, 20, std('#ffffff', { map: texCancha, roughness: .7 }), .05);
-  // aro
-  caja(.25, 3.8, .25, mat.metal, X(80), 1.9, Z(121.0));
-  caja(.15, .15, 1.6, mat.metal, X(80), 3.6, Z(121.8));
-  caja(1.8, 1.05, .06, std('#ffffff', { transparent: true, opacity: .85 }), X(80), 3.4, Z(122.6));
-  const aro = malla(new THREE.TorusGeometry(.23, .025, 8, 24), std('#ff7a2e', { roughness: .4 }), X(80), 3.05, Z(122.95)); aro.rotation.x = Math.PI / 2;
-  const red = malla(new THREE.CylinderGeometry(.23, .15, .45, 12, 1, true), new THREE.MeshBasicMaterial({ color: '#ffffff', wireframe: true }), X(80), 2.8, Z(122.95));
-  red.castShadow = false;
-  circulosCol.push({ x: 80, y: 121, r: .3 });
-  // gradas
-  [0, 1, 2].forEach((i) => caja(28, .45 * (i + 1), 1.6, std(['#5b5f74', '#666b82', '#71768f'][i]), X(80), .225 * (i + 1), Z(144.6 + i * 1.6)));
-  bloquear(66, 143.8, 94, 149.4);
-  // marcador
-  caja(.2, 4, .2, mat.metal, X(97), 2, Z(121.5));
-  const marcador = letrero('21 : 18', 3, 1.4, { fondo: '#0d0d12', color: '#ff7a2e', sub: 'LOCAL · VISITA', subColor: '#cfc4ef' });
-  marcador.position.set(X(97), 4.4, Z(121.62)); scene.add(marcador);
-  caja(3.2, 1.6, .2, mat.muroOscuro, X(97), 4.4, Z(121.45));
-}
-
-/* ======================= El Pabellón ======================= */
-{
-  sueloRect(142, 66, 30, 26, mat.madera, .08);
-  const x0 = X(142), x1 = X(172), z0 = Z(66), z1 = Z(92);
-  [[x0, z0], [x1, z0], [x0, z1], [x1, z1], [X(157), z0], [X(157), z1]].forEach(([x, z]) => caja(.45, 5.8, .45, mat.maderaOscura, x, 2.9, z));
-  caja(30.4, .5, .4, mat.maderaOscura, X(157), 5.8, z0); caja(30.4, .5, .4, mat.maderaOscura, X(157), 5.8, z1);
-  caja(.4, .5, 26.4, mat.maderaOscura, x0, 5.8, Z(79)); caja(.4, .5, 26.4, mat.maderaOscura, x1, 5.8, Z(79));
-  const m4 = new THREE.Matrix4();
-  const lamas = new THREE.InstancedMesh(new THREE.BoxGeometry(.2, .35, 26), mat.maderaClara, 42);
-  for (let i = 0; i < 42; i++) { m4.makeTranslation(x0 + .4 + i * .71, 6.2, Z(79)); lamas.setMatrixAt(i, m4); }
-  lamas.castShadow = true; scene.add(lamas);
-  // celosías norte y sur (con acceso al centro del lado sur)
-  const cel = [];
-  for (let x = 142.4; x < 171.8; x += .55) { cel.push([x, 66.1]); if (Math.abs(x - 157) > 3.2) cel.push([x, 91.9]); }
-  const cm = new THREE.InstancedMesh(new THREE.BoxGeometry(.14, 5.3, .3), mat.maderaClara, cel.length);
-  cel.forEach(([x, y], i) => { m4.makeTranslation(X(x), 2.85, Z(y)); cm.setMatrixAt(i, m4); });
-  cm.castShadow = true; scene.add(cm);
-  bloquear(142, 65.8, 172, 66.4);
-  bloquear(142, 91.6, 153.8, 92.2); bloquear(160.2, 91.6, 172, 92.2);
-  // mesas de artesanos y obra
-  const colores = ['#ff6b2c', '#ff5fa2', '#3d6bff', '#1fb36b', '#ffc31f', '#a259ff'];
-  [[148, 71.5], [166, 71.5], [148, 86.5], [166, 86.5]].forEach(([x, y], i) => {
-    caja(3.4, .1, 1.3, mat.maderaClara, X(x), .95, Z(y));
-    [-1.3, 1.3].forEach((dx) => caja(.1, .9, 1.1, mat.maderaOscura, X(x + dx), .5, Z(y)));
-    for (let k = 0; k < 5; k++) {
-      const geo = k % 2 ? new THREE.CylinderGeometry(.14, .18, .35, 12) : new THREE.BoxGeometry(.3, .25, .3);
-      malla(geo, std(colores[(i + k) % 6]), X(x - 1.2 + k * .6), 1.15, Z(y));
-    }
-    bloquear(x - 1.8, y - .75, x + 1.8, y + .75);
-  });
-  [[151, 79], [163, 79]].forEach(([x, y], i) => {
-    const arte = lienzo(256, 320, (ctx, w, h) => {
-      ctx.fillStyle = '#f5efe4'; ctx.fillRect(0, 0, w, h);
-      for (let k = 0; k < 7; k++) { ctx.fillStyle = colores[(k + i * 2) % 6]; ctx.globalAlpha = .85; ctx.beginPath(); ctx.arc(Math.random() * w, Math.random() * h, 30 + Math.random() * 60, 0, Math.PI * 2); ctx.fill(); }
-      ctx.globalAlpha = 1; ctx.lineWidth = 12; ctx.strokeStyle = '#3a2a1c'; ctx.strokeRect(6, 6, w - 12, h - 12);
-    });
-    const cuadro = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 2), std('#ffffff', { map: arte, side: THREE.DoubleSide }));
-    cuadro.position.set(X(x), 1.9, Z(y)); cuadro.rotation.y = i ? -Math.PI / 2 : Math.PI / 2; cuadro.castShadow = true; scene.add(cuadro);
-    caja(.08, 1.7, .08, mat.maderaOscura, X(x), .85, Z(y));
-  });
-}
-
-/* ======================= El Patio ======================= */
-const resortes = [];
-{
-  sueloRect(142, 102, 32, 26, std('#ffffff', { map: texTapete, roughness: .95 }), .05);
-  // torre con resbaladilla
-  const tx = X(149), tz = Z(107.5);
-  [[-1.3, -1.3], [1.3, -1.3], [-1.3, 1.3], [1.3, 1.3]].forEach(([dx, dz]) => caja(.16, 3.4, .16, std('#3d6bff'), tx + dx, 1.7, tz + dz));
-  caja(2.9, .2, 2.9, std('#ffc31f'), tx, 1.6, tz);
-  const techo = malla(new THREE.ConeGeometry(2.3, 1.3, 4), std('#ff5fa2'), tx, 4.05, tz); techo.rotation.y = Math.PI / 4;
-  const resb = caja(1, .1, 4.4, std('#ff6b2c', { roughness: .35 }), tx, .95, tz + 3.4); resb.rotation.x = .33;
-  [-.5, .5].forEach((dx) => { const b = caja(.08, .3, 4.4, std('#ff6b2c'), tx + dx, 1.1, tz + 3.4); b.rotation.x = .33; });
-  for (let i = 0; i < 5; i++) caja(1.1, .08, .12, std('#9c8bc7'), tx, .3 + i * .32, tz - 1.6);
-  bloquear(147.4, 105.9, 150.6, 109.1);
-  // domo para escalar
-  const domo = new THREE.Group(); domo.position.set(X(166), 0, Z(120)); scene.add(domo);
-  const amarillo = std('#ffc31f', { roughness: .4 });
-  for (let k = 0; k < 4; k++) { const a = malla(new THREE.TorusGeometry(2.2, .07, 6, 28, Math.PI), amarillo, 0, 0, 0, domo); a.rotation.y = k * Math.PI / 4; }
-  [.7, 1.4, 1.9].forEach((h) => { const r = Math.sqrt(2.2 ** 2 - h ** 2); const a = malla(new THREE.TorusGeometry(r, .07, 6, 32), amarillo, 0, h, 0, domo); a.rotation.x = Math.PI / 2; });
-  circulosCol.push({ x: 166, y: 120, r: 2.2 });
-  // montables con resorte
-  [[165, 107.5, '#3d6bff'], [168.5, 110, '#1fb36b'], [162, 110.5, '#ff5fa2']].forEach(([x, y, c], i) => {
-    caja(.5, .06, .5, mat.metal, X(x), .06, Z(y));
-    malla(new THREE.CylinderGeometry(.09, .09, .5, 8), mat.metal, X(x), .3, Z(y));
-    const cuerpo = malla(new THREE.CapsuleGeometry(.28, .7, 6, 12), std(c, { roughness: .4 }), X(x), .85, Z(y));
-    cuerpo.rotation.z = Math.PI / 2;
-    resortes.push({ m: cuerpo, f: i * 1.7 });
-  });
-  // cerca baja con entrada hacia la calzada
-  const cerca = std('#ffffff', { roughness: .5 });
-  [[142.3, 102.3, 173.7, 102.3], [142.3, 127.7, 173.7, 127.7], [173.7, 102.3, 173.7, 127.7], [142.3, 102.3, 142.3, 111.5], [142.3, 118.5, 142.3, 127.7]].forEach(([x1, y1, x2, y2]) => {
-    const len = Math.hypot(x2 - x1, y2 - y1);
-    caja(x1 === x2 ? .1 : len, .8, x1 === x2 ? len : .1, cerca, X((x1 + x2) / 2), .4, Z((y1 + y2) / 2));
-  });
-}
-
-/* ======================= Foro Abierto ======================= */
-const lucesForo = [];
-{
-  sueloRect(182, 124, 48, 28, std('#5e6170', { roughness: .9 }), .03);
-  caja(15, 1.2, 22, std('#2e3140', { roughness: .6 }), X(220.5), .6, Z(138));
-  bloquear(213, 127, 228, 149);
-  [Z(127.6), Z(148.4)].forEach((z) => caja(.5, 8.5, .5, mat.metal, X(214), 4.25, z));
-  caja(.5, .5, 21.3, mat.metal, X(214), 8.5, Z(138));
-  const pantalla = letrero('FORO ABIERTO', 13, 4.6, { fondo: '#16121f', color: '#ffffff', sub: 'PRÓXIMOS EVENTOS · LA PERLA®', subColor: '#ff7a6b', espacio: 8 });
-  pantalla.position.set(X(227.4), 5, Z(138)); pantalla.rotation.y = -Math.PI / 2; scene.add(pantalla);
-  caja(.3, 5.2, 13.6, mat.muroOscuro, X(227.7), 5, Z(138));
-  ['#ff5fa2', '#ffc31f', '#3d6bff', '#1fb36b', '#ff6b2c', '#a259ff'].forEach((c, i) => {
-    const z = Z(130 + i * 3.3);
-    malla(new THREE.CylinderGeometry(.22, .3, .5, 12), basico(c), X(214), 8, z, scene, false);
-    lucesForo.push({ c, z });
-  });
-  for (let fila = 0; fila < 5; fila++) {
-    [Z(133), Z(143)].forEach((z) => caja(.6, .45, 7.5, mat.maderaClara, X(188 + fila * 4), .23, z));
-  }
-}
-
-/* ======================= Acceso principal ======================= */
-{
-  const oscuro = std('#1b1b21', { roughness: .5 });
-  caja(1.6, 8, 1.6, oscuro, X(109.5), 4, Z(158));
-  caja(1.6, 8, 1.6, oscuro, X(134.5), 4, Z(158));
-  caja(26.6, 1.6, 1.6, oscuro, X(122), 8.8, Z(158));
-  caja(24, .08, .1, basico('#ff6b2c'), X(122), 7.98, Z(158.82));
-  [1, -1].forEach((lado) => {
-    const l = letrero('LA PERLA®', 18, 1.3, { color: '#ffffff', espacio: 22 });
-    l.position.set(X(122), 8.8, Z(158) + lado * .82);
-    if (lado < 0) l.rotation.y = Math.PI;
-    scene.add(l);
-  });
-  bloquear(108.7, 157.2, 110.3, 158.8);
-  bloquear(133.7, 157.2, 135.3, 158.8);
-}
-
-/* ======================= Árboles ======================= */
-{
-  const n = D.arboles.length;
-  const troncos = new THREE.InstancedMesh(new THREE.CylinderGeometry(.18, .26, 2.6, 7), mat.tronco, n);
-  const copas = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(2.1, 0), mat.copa, n * 2);
-  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), e = new THREE.Euler(), col = new THREE.Color();
-  D.arboles.forEach(([x, y], i) => {
-    const k = .85 + Math.random() * .35;
-    m4.compose(p.set(X(x), 1.3 * k, Z(y)), q.identity(), s.set(k, k, k)); troncos.setMatrixAt(i, m4);
-    for (let j = 0; j < 2; j++) {
-      e.set(Math.random(), Math.random() * 3, 0); q.setFromEuler(e);
-      const kk = k * (j ? .7 : 1);
-      m4.compose(p.set(X(x) + (j ? .6 : 0), (3.4 + j * 1.3) * k, Z(y) + (j ? -.4 : 0)), q, s.set(kk, kk * .9, kk));
-      copas.setMatrixAt(i * 2 + j, m4);
-      copas.setColorAt(i * 2 + j, col.set(['#4f8a46', '#5d9a4f', '#467d40', '#6aa457'][(i + j) % 4]));
-    }
-    circulosCol.push({ x, y, r: .35 });
-  });
-  troncos.castShadow = copas.castShadow = true;
-  scene.add(troncos, copas);
-}
-
-/* ======================= Ciudad alrededor ======================= */
-const ciudadMat = std('#ffffff', { map: texFachada, emissive: '#ffffff', emissiveMap: texFachadaLuz, emissiveIntensity: 0, roughness: .85 });
-{
-  const lotes = [];
-  // Campus de oficinas del Distrito, al norte
-  [[40, 34], [85, 44], [150, 40], [200, 30]].forEach(([x, h]) => lotes.push([X(x), Z(-24), 22, h, 18]));
-  for (let gx = -360; gx <= 360; gx += 30) for (let gz = -300; gz <= 320; gz += 30) {
-    const x = gx + (Math.random() - .5) * 10, z = gz + (Math.random() - .5) * 10;
-    if (x > -140 && x < 140 && z > -92 && z < 110) continue;
-    if (z > 74 && z < 108) continue; // avenida
-    if (x > -110 && x < 110 && z > -135 && z < -88) continue; // campus
-    if (Math.random() < .28) continue;
-    const lejos = Math.hypot(x, z) > 240;
-    lotes.push([x, z, 12 + Math.random() * 14, 6 + Math.random() * (lejos ? 46 : 22), 12 + Math.random() * 14]);
-  }
-  const geo = new THREE.BoxGeometry(1, 1, 1); geo.translate(0, .5, 0);
-  const im = new THREE.InstancedMesh(geo, ciudadMat, lotes.length);
-  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3();
-  lotes.forEach(([x, z, w, h, d], i) => { m4.compose(p.set(x, 0, z), q, s.set(w, h, d)); im.setMatrixAt(i, m4); });
-  im.receiveShadow = true;
-  scene.add(im);
-}
-
-/* ======================= Autos en Av. Mariano Otero ======================= */
-const autos = [];
-{
-  const ruedaGeo = new THREE.CylinderGeometry(.36, .36, .25, 14);
-  const colores = ['#e8e6e1', '#2d2f36', '#9c1f2e', '#2f4d7a', '#b8bcc4', '#d9a441', '#1f1f22', '#6b7a5a', '#ffffff', '#5a2a4a'];
-  for (let i = 0; i < 12; i++) {
-    const g = new THREE.Group();
-    caja(4.3, .95, 1.9, std(colores[i % colores.length], { metalness: .45, roughness: .35, envMap: entorno, envMapIntensity: .6 }), 0, .78, 0, g);
-    caja(2.3, .72, 1.72, mat.vidrio, -.25, 1.6, 0, g);
-    [[-1.35, .88], [1.35, .88], [-1.35, -.88], [1.35, -.88]].forEach(([x, z]) => { const r = malla(ruedaGeo, mat.llanta, x, .36, z, g); r.rotation.x = Math.PI / 2; });
-    caja(.06, .18, .4, basico('#fff6d8'), 2.16, .85, .62, g); caja(.06, .18, .4, basico('#fff6d8'), 2.16, .85, -.62, g);
-    caja(.06, .16, .4, basico('#ff2a2a'), -2.16, .85, .62, g); caja(.06, .16, .4, basico('#ff2a2a'), -2.16, .85, -.62, g);
-    const dir = i % 2 ? 1 : -1;
-    g.rotation.y = dir > 0 ? 0 : Math.PI;
-    scene.add(g);
-    autos.push({ g, dir, vel: 11 + Math.random() * 7, x: -320 + Math.random() * 640, z: dir > 0 ? Z(172.6) : Z(166.2) });
-  }
-}
-
-/* ======================= Luces nocturnas ======================= */
-const lucesNoche = [];
-[[122, 72, '#ffcf8a', 150], [122, 132, '#ffcf8a', 150], [110, 48, '#ffcf8a', 110], [150, 48, '#ffcf8a', 110], [84, 88, '#a9dcff', 70], [157, 79, '#ffbf80', 80], [212, 138, '#d8b8ff', 60], [158, 115, '#ffc2dd', 45]]
-  .forEach(([x, y, c, max]) => {
-    const l = new THREE.PointLight(c, 0, 42, 1.6);
-    l.position.set(X(x), 6, Z(y)); l.userData.max = max;
-    scene.add(l); lucesNoche.push(l);
-  });
-
-/* ======================= Perlas y pines ======================= */
-const perlaGeo = new THREE.SphereGeometry(.45, 40, 24);
-const perlaMat = new THREE.MeshPhysicalMaterial({
-  color: '#f7f3ff', roughness: .12, metalness: 0, clearcoat: 1, clearcoatRoughness: .08,
-  iridescence: 1, iridescenceIOR: 1.35, iridescenceThicknessRange: [180, 620],
-  sheen: .6, sheenColor: new THREE.Color('#cfc4ef'), emissive: '#9c8bc7', emissiveIntensity: .3,
-  envMap: entorno, envMapIntensity: 1.3,
-});
-const hazMat = basico('#a993e6', { map: texHaz, transparent: true, opacity: .3, depthWrite: false, side: THREE.DoubleSide });
-const hazGeo = new THREE.CylinderGeometry(.03, .28, 40, 16, 1, true);
-const perlas = D.zonas.map((z) => {
-  const g = new THREE.Group();
-  g.position.set(X(z.acceso[0]), 0, Z(z.acceso[1]));
-  const p = malla(perlaGeo, perlaMat, 0, 1.5, 0, g);
-  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: texBrillo, color: '#d9cff5', transparent: true, opacity: .55, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
-  halo.scale.set(2.8, 2.8, 1); halo.position.y = 1.5; g.add(halo);
-  const haz = new THREE.Mesh(hazGeo, hazMat); haz.position.y = 20; g.add(haz);
-  const aro = new THREE.Mesh(new THREE.RingGeometry(.85, 1.05, 40).rotateX(-Math.PI / 2), basico('#cfc4ef', { transparent: true, opacity: .6 }));
-  aro.position.y = .1; g.add(aro);
-  scene.add(g);
-  return { z, g, p, halo, tomada: false, t: 0 };
-});
-
-function pinTextura(z) {
-  return lienzo(512, 300, (ctx) => {
-    // insignia cuadrada con sombra dura, como en el mapa aéreo
-    ctx.fillStyle = '#141414'; ctx.fillRect(196, 26, 132, 132);
-    ctx.fillStyle = z.acento; ctx.fillRect(186, 16, 132, 132);
-    ctx.lineWidth = 8; ctx.strokeStyle = '#141414'; ctx.strokeRect(186, 16, 132, 132);
-    ctx.save(); ctx.translate(252 - 48, 82 - 48); ctx.scale(4, 4);
-    ctx.strokeStyle = D.tinta(z.acento); ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.stroke(new Path2D(D.ICONOS[z.icono])); ctx.restore();
-    ajustarTexto(ctx, z.nombre, 460, 40, 800);
-    const tw = ctx.measureText(z.nombre).width, pw = tw + 44;
-    ctx.fillStyle = '#141414'; ctx.fillRect(256 - pw / 2 + 8, 196 + 8, pw, 72);
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(256 - pw / 2, 196, pw, 72);
-    ctx.lineWidth = 6; ctx.strokeStyle = '#141414'; ctx.strokeRect(256 - pw / 2, 196, pw, 72);
-    ctx.fillStyle = '#141414'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(z.nombre, 256, 233);
-  });
-}
-const pines = D.zonas.map((z) => {
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: pinTextura(z), transparent: true, depthWrite: false, toneMapped: false }));
-  const alto = z.edificio ? z.edificio.alto + 6 : 9.5;
-  sp.position.set(X(z.pin[0]), alto, Z(z.pin[1]));
-  sp.scale.set(8, 8 * 300 / 512, 1);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false }));
+  sp.position.set(X(t.centro[0]), MUNDO.ALTO_LOCAL + 1.6, Z(t.centro[1]));
+  sp.scale.set(6.4, 1.2, 1);
   scene.add(sp);
-  return { z, sp };
+  letreros.push(sp);
 });
 
 /* ======================= Estado y controles ======================= */
-const P = { x: 122, y: 154, yaw: 0, pitch: -0.04, vx: 0, vy: 0, paso: 0 };
-const estado = { iniciado: false, jugando: false, dist: 0, tiempo: 0, noche: 0, nocheObj: 0, sonido: true, fichaT: 0, completo: false };
+const P = { x: 196, y: 1052, yaw: 0, pitch: -0.03, vx: 0, vy: 0, paso: 0 };
+const estado = { iniciado: false, jugando: false, dist: 0, tiempo: 0, noche: 0, nocheObj: 0, completo: false };
+const estrellas = guardado.get('laperla-estrellas', {});
 const teclas = new Set();
 const joy = { x: 0, y: 0, mag: 0, id: null, ox: 0, oy: 0 };
 let mirada = null;
+let estacionCerca = null;
 
 addEventListener('keydown', (e) => {
-  if (e.target.closest && e.target.closest('input, textarea')) return;
   if (e.code === 'KeyM') return alternarMapa();
   if (e.code === 'KeyN') return alternarNoche();
   if (e.code === 'Escape') return cerrarOverlays();
   if (!estado.jugando) return;
+  if ((e.code === 'KeyE' || e.code === 'Enter') && estacionCerca) return jugarEstacion(estacionCerca);
   teclas.add(e.code);
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
 });
@@ -1093,15 +317,12 @@ addEventListener('blur', () => teclas.clear());
 
 canvas.addEventListener('pointerdown', (e) => {
   if (!estado.jugando) return;
-  try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* puntero sintético o ya liberado */ }
+  try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* sin captura */ }
   if (e.pointerType === 'touch' && e.clientX < innerWidth * .45 && joy.id === null) {
     joy.id = e.pointerId; joy.ox = e.clientX; joy.oy = e.clientY;
     const j = $('joy'); j.style.left = `${e.clientX}px`; j.style.top = `${e.clientY}px`; j.classList.add('on');
     j.firstElementChild.style.transform = '';
-  } else if (!mirada) {
-    mirada = { id: e.pointerId, x: e.clientX, y: e.clientY };
-    canvas.classList.add('arrastrando');
-  }
+  } else if (!mirada) { mirada = { id: e.pointerId, x: e.clientX, y: e.clientY }; canvas.classList.add('arrastrando'); }
 });
 canvas.addEventListener('pointermove', (e) => {
   if (e.pointerId === joy.id) {
@@ -1124,47 +345,19 @@ function soltar(e) {
 canvas.addEventListener('pointerup', soltar);
 canvas.addEventListener('pointercancel', soltar);
 
-/* ======================= Sonido ======================= */
-let audio = null;
-function campanita() {
-  if (!estado.sonido) return;
-  try {
-    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-    const t0 = audio.currentTime;
-    [1046.5, 1318.5, 1568, 2093].forEach((f, i) => {
-      const o = audio.createOscillator(), g = audio.createGain();
-      o.type = 'sine'; o.frequency.value = f;
-      g.gain.setValueAtTime(0, t0 + i * .07);
-      g.gain.linearRampToValueAtTime(.07, t0 + i * .07 + .01);
-      g.gain.exponentialRampToValueAtTime(.0001, t0 + i * .07 + .6);
-      o.connect(g).connect(audio.destination); o.start(t0 + i * .07); o.stop(t0 + i * .07 + .65);
-    });
-  } catch (e) { /* sin audio */ }
-}
-
 /* ======================= Día / noche ======================= */
-const DIA = { arriba: new THREE.Color('#5f9ed8'), abajo: new THREE.Color('#f1e4d2'), niebla: new THREE.Color('#e8ddcd'), hemi: 1.15, sol: 2.6, solC: new THREE.Color('#fff0d8'), exp: 1.0 };
-const NOCHE = { arriba: new THREE.Color('#06071a'), abajo: new THREE.Color('#2b2246'), niebla: new THREE.Color('#1d1832'), hemi: .16, sol: .3, solC: new THREE.Color('#8ea6ff'), exp: 1.25 };
+const DIA = { arriba: new THREE.Color('#7fb8f0'), abajo: new THREE.Color('#f4f8ff'), niebla: new THREE.Color('#eef4ff'), hemi: 1.25, sol: 2.4, exp: 1.05 };
+const NOCHE = { arriba: new THREE.Color('#0a0b22'), abajo: new THREE.Color('#2e2350'), niebla: new THREE.Color('#1e1936'), hemi: .25, sol: .25, exp: 1.3 };
+const matsFachada = [...new Set(plaza.tiendasMallas.map((m) => m.userData.mats[1]))];
 function aplicarHora(n) {
   cieloMat.uniforms.arriba.value.copy(DIA.arriba).lerp(NOCHE.arriba, n);
   cieloMat.uniforms.abajo.value.copy(DIA.abajo).lerp(NOCHE.abajo, n);
   scene.fog.color.copy(DIA.niebla).lerp(NOCHE.niebla, n);
-  scene.fog.near = lerp(90, 50, n); scene.fog.far = lerp(420, 300, n);
-  hemi.intensity = lerp(DIA.hemi, NOCHE.hemi, n);
-  sol.intensity = lerp(DIA.sol, NOCHE.sol, n);
-  sol.color.copy(DIA.solC).lerp(NOCHE.solC, n);
+  plaza.hemi.intensity = lerp(DIA.hemi, NOCHE.hemi, n);
+  plaza.sol.intensity = lerp(DIA.sol, NOCHE.sol, n);
   renderer.toneMappingExposure = lerp(DIA.exp, NOCHE.exp, n);
-  mat.vidrio.emissiveIntensity = lerp(.15, 1.5, n);
-  mat.vidrio.envMapIntensity = lerp(1, .2, n);
-  perlaMat.envMapIntensity = lerp(1.3, .5, n);
-  perlaMat.emissiveIntensity = lerp(.3, .9, n);
-  ciudadMat.emissiveIntensity = n * 1.4;
-  brilloFocos.material.opacity = lerp(.1, .95, n);
-  focoMat.color.set(n > .5 ? '#fff1c9' : '#e9d9b0');
-  hazMat.opacity = lerp(.3, .5, n);
-  hazMat.color.set(n > .5 ? '#cfc4ef' : '#a993e6');
-  estrellas.material.opacity = Math.max(0, n * 1.2 - .2);
-  lucesNoche.forEach((l) => { l.intensity = n * l.userData.max; });
+  matsFachada.forEach((m) => { m.emissive.copy(m.color); m.emissiveIntensity = n * .45; });
+  if (plaza.focoMat) plaza.focoMat.color.set(n > .5 ? '#fff4c9' : '#ffe29a');
 }
 aplicarHora(0);
 function alternarNoche() {
@@ -1173,160 +366,150 @@ function alternarNoche() {
   $('btnNoche').querySelector('.txt').textContent = estado.nocheObj ? 'Ver de día' : 'Ciudad de luces';
 }
 $('btnNoche').addEventListener('click', alternarNoche);
-$('btnSonido').addEventListener('click', () => {
-  estado.sonido = !estado.sonido;
-  $('btnSonido').setAttribute('aria-pressed', String(estado.sonido));
-  $('ondas').style.display = estado.sonido ? '' : 'none';
-});
 
 /* ======================= Interfaz ======================= */
-const iconoSVG = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="${D.ICONOS[n]}"/></svg>`;
-const multiplicador = Math.round((CFG.vel * CFG.escala) / CFG.pie);
-$('escalaTxt').textContent = CFG.escala; $('escalaTxt2').textContent = CFG.escala;
-$('multTxt').textContent = multiplicador; $('multTxt2').textContent = multiplicador;
-$('nPerlas').textContent = perlas.length;
+const mult = Math.round((CFG.vel * CFG.mPorUnidad) / CFG.pie);
+$('multTxt').textContent = mult; $('multTxt2').textContent = mult; $('multTxt0').textContent = `${mult}× más rápido`;
 const CONTROLES = tactil
   ? [['<span class="tecla"><kbd>Joystick</kbd></span>', 'Toca el lado izquierdo y desliza para caminar (hasta el borde para correr)'],
      ['<span class="tecla"><kbd>Deslizar</kbd></span>', 'Desliza en el lado derecho para mirar alrededor'],
-     ['<span class="tecla"><kbd>Mapa</kbd></span>', 'Toca el minimapa para el viaje rápido']]
+     ['<span class="tecla"><kbd>Jugar</kbd></span>', 'Acércate a un tótem y toca «Jugar»']]
   : [['<span class="tecla"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>', 'Caminar (o ↑ ↓ para avanzar y ← → para girar)'],
      ['<span class="tecla"><kbd>Arrastrar</kbd></span>', 'Mantén presionado y arrastra para mirar alrededor'],
      ['<span class="tecla"><kbd>Shift</kbd></span>', 'Correr'],
+     ['<span class="tecla"><kbd>E</kbd></span>', 'Jugar cuando estés junto a un tótem'],
      ['<span class="tecla"><kbd>M</kbd><kbd>N</kbd></span>', 'Mapa y viaje rápido · Día / noche']];
 $('controles').innerHTML = $('controles2').innerHTML = CONTROLES.map(([k, t]) => `${k}<span>${t}</span>`).join('');
 
 let avisoT;
-function aviso(msg) {
-  const a = $('aviso'); a.textContent = msg; a.classList.add('on');
-  clearTimeout(avisoT); avisoT = setTimeout(() => a.classList.remove('on'), 2200);
+function aviso(msg) { const a = $('aviso'); a.textContent = msg; a.classList.add('on'); clearTimeout(avisoT); avisoT = setTimeout(() => a.classList.remove('on'), 2400); }
+function contarEstrellas() {
+  const total = D.zonas.reduce((s, z) => s + (estrellas[z.juego] || 0), 0);
+  $('stEstrellas').textContent = `${total}/${D.zonas.length * 3}`;
+  return total;
 }
-function mostrarFicha(z, segundos = 9) {
-  const f = $('ficha');
-  f.style.setProperty('--acc', z.acento);
-  f.style.setProperty('--t', D.tinta(z.acento));
-  $('fichaIco').innerHTML = iconoSVG(z.icono);
-  $('fichaCat').textContent = z.categoria;
-  $('fichaNom').textContent = z.nombre;
-  $('fichaDesc').textContent = z.desc;
-  const extra = [z.m2, z.horario].filter(Boolean).map((t) => `<li class="fuerte">${t}</li>`).join('');
-  $('fichaDatos').innerHTML = extra + z.datos.map((d) => `<li>${d}</li>`).join('');
-  f.classList.add('on');
-  estado.fichaT = segundos;
-}
-$('fichaCerrar').addEventListener('click', () => { $('ficha').classList.remove('on'); estado.fichaT = 0; });
+contarEstrellas();
 
-let lugarActual = null;
-const ordenZonas = [...D.zonas].sort((a, b) => area(a) - area(b));
-function area(z) { const f = z.forma; return f.tipo === 'rect' ? f.w * f.h : f.tipo === 'circ' ? Math.PI * f.r * f.r : 1e9; }
+function mostrarJugar(est) {
+  const j = $('jugar');
+  if (!est) { j.classList.remove('on'); return; }
+  const z = est.zona, e = estrellas[z.juego] || 0;
+  j.style.setProperty('--acc', z.acento); j.style.setProperty('--t', D.tinta(z.acento));
+  $('jugarIco').innerHTML = icono(z.icono);
+  $('jugarZona').textContent = z.nombre;
+  $('jugarTitulo').textContent = JUEGOS[z.juego].titulo;
+  $('jugarEst').textContent = `${'★'.repeat(e)}${'☆'.repeat(3 - e)}`;
+  j.classList.add('on');
+}
+$('jugarBtn').addEventListener('click', () => estacionCerca && jugarEstacion(estacionCerca));
+function jugarEstacion(est) {
+  estado.jugando = false; teclas.clear();
+  const z = est.zona;
+  abrirMinijuego(z.juego, {
+    zona: z, mejor: estrellas[z.juego] || 0,
+    alTerminar: (e) => {
+      if (e > (estrellas[z.juego] || 0)) { estrellas[z.juego] = e; guardado.set('laperla-estrellas', estrellas); contarEstrellas(); mostrarJugar(est); }
+      revisarFin();
+    },
+  });
+  // al cerrar el minijuego se reanuda el recorrido
+  const obs = new MutationObserver(() => { if (!document.querySelector('.mj-capa')) { obs.disconnect(); estado.jugando = true; canvas.focus({ preventScroll: true }); } });
+  obs.observe(document.body, { childList: true });
+}
+function revisarFin() {
+  if (estado.completo || !D.zonas.every((z) => (estrellas[z.juego] || 0) > 0)) return;
+  estado.completo = true;
+  $('resumen').innerHTML = `
+    <div><span class="lbl">Tiempo aquí</span><b>${mmss(estado.tiempo)}</b></div>
+    <div class="real"><span class="lbl">A pie en la plaza</span><b>${mmss((estado.dist * CFG.mPorUnidad) / CFG.pie)}</b></div>
+    <div><span class="lbl">Estrellas</span><b>${contarEstrellas()}/${D.zonas.length * 3}</b></div>
+    <div class="real"><span class="lbl">Distancia real</span><b>${metros(estado.dist * CFG.mPorUnidad)}</b></div>`;
+  setTimeout(() => { if (!document.querySelector('.mj-capa')) { $('fin').hidden = false; estado.jugando = false; } }, 600);
+}
+
+/* ---------- Ubicación ---------- */
+const ordenZonas = D.zonas.filter((z) => z.forma && z.nivel === 0).sort((a, b) => (a.id === 'calzada') - (b.id === 'calzada'));
+let lugarTxt = '';
 function calcularLugar() {
-  for (const z of ordenZonas) if (!z.edificio && D.contiene(z, P.x, P.y)) return { z, txt: z.nombre, sub: z.categoria };
-  let cerca = null, dmin = 11;
-  for (const z of D.zonas) {
-    if (!z.edificio) continue;
-    const d = Math.hypot(z.acceso[0] - P.x, z.acceso[1] - P.y);
-    if (d < dmin) { dmin = d; cerca = z; }
-  }
-  if (cerca) return { z: cerca, txt: `Frente a ${cerca.nombre}`, sub: cerca.categoria };
-  if (P.y > 150 && Math.abs(P.x - 122) < 16) return { z: null, txt: 'Acceso principal', sub: 'Av. Mariano Otero' };
-  return { z: null, txt: 'Plaza La Perla', sub: 'Zapopan, Jalisco' };
+  const est = plaza.estaciones.find((e) => Math.hypot(e.x - P.x, e.y - P.y) < 45);
+  if (est) return { txt: est.zona.nombre, sub: est.zona.categoria, acc: est.zona.acento };
+  for (const z of ordenZonas) if (D.contiene(z, P.x, P.y)) return { txt: z.nombre, sub: z.categoria, acc: z.acento };
+  let cerca = null, dmin = 70;
+  D.NIVELES[0].tiendas.forEach((t) => { if (!t.nombre) return; const d = Math.hypot(t.centro[0] - P.x, t.centro[1] - P.y) - Math.sqrt(t.area) / 2; if (d < dmin) { dmin = d; cerca = t; } });
+  if (cerca) return { txt: `Frente a ${cerca.nombre}`, sub: D.CATEGORIAS[cerca.cat].nombre, acc: D.CATEGORIAS[cerca.cat].color };
+  if (P.y > 1000) return { txt: 'Acceso Mariano Otero', sub: 'Planta baja', acc: '#ff6b2c' };
+  return { txt: 'Plaza La Perla', sub: 'Planta baja', acc: '#ff6b2c' };
 }
-$('lugar').addEventListener('click', () => { if (lugarActual && lugarActual.z) mostrarFicha(lugarActual.z, 14); });
 
-/* ---------- Mapa (minimapa y viaje rápido) ---------- */
-function trazar(ctx, z) {
-  const f = z.forma;
-  ctx.beginPath();
-  if (f.tipo === 'rect') ctx.rect(f.x, f.y, f.w, f.h);
-  else if (f.tipo === 'circ') ctx.arc(f.cx, f.cy, f.r, 0, Math.PI * 2);
-  else { f.puntos.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); }
-}
-function dibujarPlano(cv, { etiquetas = false, resalta = null } = {}) {
+/* ---------- Mapas ---------- */
+function trazar(ctx, p) { ctx.beginPath(); p.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); }
+function dibujarPlano(cv, { etiquetas = false } = {}) {
   const dpr = Math.min(devicePixelRatio, 2);
   const W = cv.clientWidth, H = cv.clientHeight;
   if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
   const ctx = cv.getContext('2d');
-  const s = Math.min(W / 240, H / 178), ox = (W - 240 * s) / 2, oy = (H - 178 * s) / 2;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, W, H);
+  const x0 = -60, y0 = -60, ancho = 1320, alto = 1200;
+  const s = Math.min(W / ancho, H / alto), ox = (W - ancho * s) / 2 - x0 * s, oy = (H - alto * s) / 2 - y0 * s;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
   ctx.translate(ox, oy); ctx.scale(s, s);
-  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 240, 178);
-  ctx.fillStyle = '#f7f7f4'; ctx.fillRect(2, 2, 236, 158);
-  ctx.strokeStyle = '#e6e6e1'; ctx.lineWidth = .3;
-  for (let gx = 6; gx < 238; gx += 8) { ctx.beginPath(); ctx.moveTo(gx, 2); ctx.lineTo(gx, 160); ctx.stroke(); }
-  for (let gy = 6; gy < 160; gy += 8) { ctx.beginPath(); ctx.moveTo(2, gy); ctx.lineTo(238, gy); ctx.stroke(); }
-  ctx.fillStyle = '#141414'; ctx.fillRect(0, 162, 240, 14);
-  const hechas = new Set(perlas.filter((p) => p.tomada).map((p) => p.z.id));
-  [calzada, ...D.zonas.filter((z) => z !== calzada)].forEach((z) => {
-    trazar(ctx, z);
-    ctx.fillStyle = hechas.has(z.id) || z.id === resalta ? z.acento : z.plano; ctx.fill();
-    ctx.lineWidth = z.id === resalta ? 2 : .9;
-    ctx.strokeStyle = '#141414';
-    ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.fillRect(x0, y0, ancho, alto);
+  D.CALLES.forEach((c) => { ctx.fillStyle = '#141414'; trazar(ctx, c.poly); ctx.fill(); });
+  D.zonas.filter((z) => z.forma && z.nivel === 0).forEach((z) => {
+    ctx.fillStyle = (estrellas[z.juego] ? z.acento : z.acento + '55');
+    if (z.forma.tipo === 'circ') { ctx.beginPath(); ctx.arc(z.forma.cx, z.forma.cy, z.forma.r, 0, Math.PI * 2); ctx.fill(); }
+    else { trazar(ctx, z.forma.puntos); ctx.fill(); }
   });
-  perlas.forEach((p) => {
-    if (p.tomada) return;
-    const r = etiquetas ? 1.8 : 2.6;
-    ctx.fillStyle = '#ff5fa2'; ctx.fillRect(p.z.acceso[0] - r, p.z.acceso[1] - r, r * 2, r * 2);
-    ctx.lineWidth = .6; ctx.strokeStyle = '#141414'; ctx.strokeRect(p.z.acceso[0] - r, p.z.acceso[1] - r, r * 2, r * 2);
+  ctx.lineWidth = 2 / s * .6;
+  D.NIVELES[0].tiendas.forEach((t) => { trazar(ctx, t.poly); ctx.fillStyle = t.cat === 'local' ? '#eee' : D.CATEGORIAS[t.cat].color + 'aa'; ctx.fill(); ctx.strokeStyle = '#141414'; ctx.stroke(); });
+  plaza.estaciones.forEach((e) => {
+    const r = etiquetas ? 14 : 20;
+    ctx.fillStyle = e.zona.acento; ctx.fillRect(e.x - r, e.y - r, r * 2, r * 2);
+    ctx.lineWidth = 4; ctx.strokeStyle = '#141414'; ctx.strokeRect(e.x - r, e.y - r, r * 2, r * 2);
+    if (estrellas[e.zona.juego]) { ctx.fillStyle = '#141414'; ctx.font = `900 ${r * 1.4}px Montserrat`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('★', e.x, e.y + 1); }
   });
   if (etiquetas) {
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    D.zonas.forEach((z) => {
-      ctx.font = '800 4px Montserrat, sans-serif';
-      ctx.lineWidth = 1.4; ctx.strokeStyle = '#ffffff'; ctx.strokeText(z.nombre, z.pin[0], z.pin[1]);
-      ctx.fillStyle = '#141414'; ctx.fillText(z.nombre, z.pin[0], z.pin[1]);
-    });
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '800 24px Montserrat, sans-serif';
+    plaza.estaciones.forEach((e) => { ctx.lineWidth = 6; ctx.strokeStyle = '#fff'; ctx.strokeText(e.zona.nombre, e.x, e.y - 34); ctx.fillStyle = '#141414'; ctx.fillText(e.zona.nombre, e.x, e.y - 34); });
   }
-  // jugador
-  ctx.save();
-  ctx.translate(P.x, P.y); ctx.rotate(Math.atan2(-Math.cos(P.yaw), -Math.sin(P.yaw)));
-  const k = etiquetas ? 1 : 1.6;
-  ctx.beginPath(); ctx.arc(0, 0, 10 * k, -.5, .5); ctx.lineTo(0, 0); ctx.closePath();
-  ctx.fillStyle = 'rgba(255,107,44,.3)'; ctx.fill();
+  ctx.save(); ctx.translate(P.x, P.y); ctx.rotate(Math.atan2(-Math.cos(P.yaw), -Math.sin(P.yaw)));
+  const k = etiquetas ? 5 : 8;
+  ctx.beginPath(); ctx.arc(0, 0, 14 * k, -.5, .5); ctx.lineTo(0, 0); ctx.closePath(); ctx.fillStyle = 'rgba(255,107,44,.3)'; ctx.fill();
   ctx.beginPath(); ctx.moveTo(4.4 * k, 0); ctx.lineTo(-2.6 * k, 2.8 * k); ctx.lineTo(-1.2 * k, 0); ctx.lineTo(-2.6 * k, -2.8 * k); ctx.closePath();
-  ctx.fillStyle = '#ff6b2c'; ctx.fill(); ctx.lineWidth = .8; ctx.strokeStyle = '#141414'; ctx.stroke();
+  ctx.fillStyle = '#ff6b2c'; ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = '#141414'; ctx.stroke();
   ctx.restore();
   return { s, ox, oy };
 }
 const mini = $('mini');
 mini.addEventListener('click', () => alternarMapa(true));
 $('btnMapa').addEventListener('click', () => alternarMapa(true));
-
 const mapaCv = $('mapaCanvas');
-let mapaHover = null;
-function zonaEnMapa(e) {
+mapaCv.addEventListener('click', (e) => {
   const r = mapaCv.getBoundingClientRect();
-  const W = r.width, H = r.height, s = Math.min(W / 240, H / 178);
-  const x = (e.clientX - r.left - (W - 240 * s) / 2) / s, y = (e.clientY - r.top - (H - 178 * s) / 2) / s;
-  return ordenZonas.find((z) => D.contiene(z, x, y)) || null;
-}
-mapaCv.addEventListener('pointermove', (e) => {
-  const z = zonaEnMapa(e);
-  if ((z && z.id) !== mapaHover) { mapaHover = z && z.id; dibujarPlano(mapaCv, { etiquetas: true, resalta: mapaHover }); }
+  const W = r.width, H = r.height, x0 = -60, y0 = -60, ancho = 1320, alto = 1200;
+  const s = Math.min(W / ancho, H / alto), ox = (W - ancho * s) / 2 - x0 * s, oy = (H - alto * s) / 2 - y0 * s;
+  const x = (e.clientX - r.left - ox) / s, y = (e.clientY - r.top - oy) / s;
+  let mejor = null, dm = 80;
+  plaza.estaciones.forEach((est) => { const d = Math.hypot(est.x - x, est.y - y); if (d < dm) { dm = d; mejor = est; } });
+  if (mejor) viajar(mejor);
 });
-mapaCv.addEventListener('click', (e) => { const z = zonaEnMapa(e); if (z) viajar(z); });
 function listaZonas() {
-  const hechas = new Set(perlas.filter((p) => p.tomada).map((p) => p.z.id));
-  $('listaZonas').innerHTML = D.zonas.map((z) => `<button style="--c:${z.acento}" class="${hechas.has(z.id) ? 'hecha' : ''}" data-z="${z.id}"><i></i>${z.nombre}${hechas.has(z.id) ? ' ✓' : ''}</button>`).join('');
+  $('listaZonas').innerHTML = plaza.estaciones.map((e, i) => `<button style="--c:${e.zona.acento}" data-i="${i}"><i></i>${e.zona.nombre}${estrellas[e.zona.juego] ? ` ${'★'.repeat(estrellas[e.zona.juego])}` : ''}</button>`).join('');
 }
-$('listaZonas').addEventListener('click', (e) => { const b = e.target.closest('[data-z]'); if (b) viajar(D.zona(b.dataset.z)); });
-function viajar(z) {
-  const [ax, ay] = z.acceso;
-  // aparece un poco antes de la perla, mirando hacia la zona (o hacia su punto de vista preferido)
-  const mira = z.vista || z.pin;
-  const dx = mira[0] - ax, dy = mira[1] - ay;
-  let ox = ax, oy = ay;
-  const l = Math.hypot(dx, dy) || 1;
-  for (let k = 5; k >= 0; k -= .5) { const tx = ax - (dx / l) * k, ty = ay - (dy / l) * k; if (!choca(tx, ty)) { ox = tx; oy = ty; break; } }
-  P.x = ox; P.y = oy; P.vx = P.vy = 0;
-  P.yaw = Math.atan2(-(ax - ox) || -dx, -(ay - oy) || -dy);
-  P.pitch = -0.05;
+$('listaZonas').addEventListener('click', (e) => { const b = e.target.closest('[data-i]'); if (b) viajar(plaza.estaciones[+b.dataset.i]); });
+function viajar(est) {
+  // aparece a unos pasos del tótem, mirándolo
+  const angulos = [Math.PI / 2, 0, Math.PI, -Math.PI / 2, Math.PI / 4, -Math.PI / 4, 3 * Math.PI / 4, -3 * Math.PI / 4];
+  for (const a of angulos) {
+    const x = est.x + Math.cos(a) * 24, y = est.y + Math.sin(a) * 24;
+    if (!plaza.choca(x, y, CFG.radioPx)) { P.x = x; P.y = y; break; }
+  }
+  P.yaw = Math.atan2(-(est.x - P.x), -(est.y - P.y)); P.pitch = -0.08; P.vx = P.vy = 0;
   cerrarOverlays();
-  aviso(`Viaje rápido · ${z.nombre}`);
+  aviso(`Viaje rápido · ${est.zona.nombre}`);
 }
 function alternarMapa(abrir) {
-  const m = $('mapaGrande');
   if (!estado.iniciado) return;
+  const m = $('mapaGrande');
   const ab = abrir === undefined ? m.hidden : abrir;
   if (!ab) return cerrarOverlays();
   m.hidden = false; estado.jugando = false; teclas.clear();
@@ -1335,36 +518,12 @@ function alternarMapa(abrir) {
 }
 function cerrarOverlays() {
   ['mapaGrande', 'ayuda', 'fin'].forEach((id) => { $(id).hidden = true; });
-  if (estado.iniciado) { estado.jugando = true; canvas.focus({ preventScroll: true }); }
+  if (estado.iniciado && !document.querySelector('.mj-capa')) { estado.jugando = true; canvas.focus({ preventScroll: true }); }
 }
-document.querySelectorAll('.overlay').forEach((o) => o.addEventListener('click', (e) => {
-  if (o.id === 'inicio') return;
-  if (e.target === o || e.target.closest('[data-cerrar]')) cerrarOverlays();
-}));
+document.querySelectorAll('.overlay').forEach((o) => o.addEventListener('click', (e) => { if (o.id !== 'inicio' && (e.target === o || e.target.closest('[data-cerrar]'))) cerrarOverlays(); }));
 $('btnAyuda').addEventListener('click', () => { $('ayuda').hidden = false; estado.jugando = false; teclas.clear(); });
 
-/* ---------- Perlas ---------- */
-function tomarPerla(p) {
-  p.tomada = true; p.t = 0;
-  const n = perlas.filter((q) => q.tomada).length;
-  $('stPerlas').textContent = `${n}/${perlas.length}`;
-  campanita();
-  aviso(`¡Perla ${n}/${perlas.length}! · ${p.z.nombre}`);
-  mostrarFicha(p.z);
-  if (n === perlas.length && !estado.completo) {
-    estado.completo = true;
-    setTimeout(() => {
-      $('resumen').innerHTML = `
-        <div><span class="lbl">Tiempo aquí</span><b>${mmss(estado.tiempo)}</b></div>
-        <div class="real"><span class="lbl">A pie en la plaza</span><b>${mmss((estado.dist * CFG.escala) / CFG.pie)}</b></div>
-        <div><span class="lbl">Recorrido aquí</span><b>${metros(estado.dist)}</b></div>
-        <div class="real"><span class="lbl">Distancia real</span><b>${metros(estado.dist * CFG.escala)}</b></div>`;
-      $('fin').hidden = false; estado.jugando = false; teclas.clear();
-    }, 2200);
-  }
-}
-
-/* ======================= Ciclo principal ======================= */
+/* ======================= Ciclo ======================= */
 function mover(dt) {
   let f = 0, s = 0, giro = 0;
   if (teclas.has('KeyW') || teclas.has('ArrowUp')) f += 1;
@@ -1372,125 +531,21 @@ function mover(dt) {
   if (teclas.has('KeyD')) s += 1;
   if (teclas.has('KeyA')) s -= 1;
   if (teclas.has('ArrowLeft') || teclas.has('KeyQ')) giro += 1;
-  if (teclas.has('ArrowRight') || teclas.has('KeyE')) giro -= 1;
+  if (teclas.has('ArrowRight')) giro -= 1;
   f += joy.y; s += joy.x;
-  const len = Math.hypot(f, s);
-  if (len > 1) { f /= len; s /= len; }
+  const len = Math.hypot(f, s); if (len > 1) { f /= len; s /= len; }
   P.yaw += giro * CFG.giro * dt;
-  const correr = teclas.has('ShiftLeft') || teclas.has('ShiftRight') || joy.mag > .97;
-  const v = correr ? CFG.velCorrer : CFG.vel;
+  const v = (teclas.has('ShiftLeft') || teclas.has('ShiftRight') || joy.mag > .97) ? CFG.velCorrer : CFG.vel;
   const sy = Math.sin(P.yaw), cy = Math.cos(P.yaw);
-  const tx = (-sy * f + cy * s) * v, ty = (-cy * f - sy * s) * v;
+  const tx = (-sy * f + cy * s) * v * PX, ty = (-cy * f - sy * s) * v * PX;
   const k = 1 - Math.exp(-10 * dt);
   P.vx += (tx - P.vx) * k; P.vy += (ty - P.vy) * k;
   const x0 = P.x, y0 = P.y;
-  const nx = P.x + P.vx * dt; if (!choca(nx, P.y)) P.x = nx; else P.vx *= .2;
-  const ny = P.y + P.vy * dt; if (!choca(P.x, ny)) P.y = ny; else P.vy *= .2;
-  const d = Math.hypot(P.x - x0, P.y - y0);
+  const nx = P.x + P.vx * dt; if (!plaza.choca(nx, P.y, CFG.radioPx)) P.x = nx; else P.vx *= .2;
+  const ny = P.y + P.vy * dt; if (!plaza.choca(P.x, ny, CFG.radioPx)) P.y = ny; else P.vy *= .2;
+  const d = Math.hypot(P.x - x0, P.y - y0) / PX;
   estado.dist += d; estado.tiempo += dt; P.paso += d;
 }
-
-const reloj = new THREE.Clock();
-let t = 0, cuadroN = 0, hudT = 0;
-function cuadro() {
-  const dt = Math.min(reloj.getDelta(), .05);
-  t += dt; cuadroN++;
-
-  if (estado.jugando) mover(dt);
-  else if (!estado.iniciado) P.yaw = Math.sin(t * .12) * .55;
-
-  // transición día/noche
-  if (estado.noche !== estado.nocheObj) {
-    const paso = dt / 1.4;
-    estado.noche = estado.nocheObj > estado.noche ? Math.min(estado.nocheObj, estado.noche + paso) : Math.max(estado.nocheObj, estado.noche - paso);
-    aplicarHora(estado.noche);
-  }
-
-  // cámara
-  const vel = Math.hypot(P.vx, P.vy);
-  camera.position.set(X(P.x), CFG.ojos + Math.sin(P.paso * 1.7) * .045 * Math.min(1, vel / CFG.vel), Z(P.y));
-  camera.rotation.set(P.pitch, P.yaw, 0);
-  cielo.position.copy(camera.position);
-  estrellas.position.copy(camera.position);
-
-  // fuente
-  for (let i = 0; i < NAGUA; i++) {
-    aguaVel[i * 3 + 1] -= 9.8 * dt;
-    aguaPos[i * 3] += aguaVel[i * 3] * dt; aguaPos[i * 3 + 1] += aguaVel[i * 3 + 1] * dt; aguaPos[i * 3 + 2] += aguaVel[i * 3 + 2] * dt;
-    if (aguaPos[i * 3 + 1] < .65) chorro(i, 0);
-  }
-  aguaGeo.attributes.position.needsUpdate = true;
-
-  // perritos
-  perritos.forEach((p) => {
-    const a = t * p.w + p.f;
-    const x = p.cx + Math.cos(a) * p.r, y = p.cy + Math.sin(a) * p.r;
-    const dx = -Math.sin(a) * p.w, dy = Math.cos(a) * p.w;
-    p.g.position.set(X(x), 0, Z(y));
-    p.g.rotation.y = Math.atan2(-dy, dx);
-    p.patas.forEach((pt, i) => { pt.rotation.z = Math.sin(t * 9 + (i % 2 ? Math.PI : 0) + (i > 1 ? Math.PI : 0)) * .5; });
-    p.cola.rotation.y = Math.sin(t * 12) * .5;
-  });
-  resortes.forEach((r) => { r.m.rotation.x = Math.sin(t * 2.2 + r.f) * .12; });
-
-  // autos
-  autos.forEach((a) => {
-    a.x += a.dir * a.vel * dt;
-    if (a.x > 360) a.x = -360; if (a.x < -360) a.x = 360;
-    a.g.position.set(a.x, 0, a.z);
-  });
-
-  // perlas
-  perlas.forEach((p, i) => {
-    if (!p.g.visible) return;
-    if (!p.tomada) {
-      p.p.position.y = 1.5 + Math.sin(t * 2 + i) * .15;
-      p.p.rotation.y += dt * .8;
-      p.halo.position.y = p.p.position.y;
-      if (estado.jugando && Math.hypot(P.x - p.z.acceso[0], P.y - p.z.acceso[1]) < 2.4) tomarPerla(p);
-    } else {
-      p.t += dt;
-      const k = p.t / .7;
-      p.p.position.y = 1.5 + k * 2.2;
-      p.p.scale.setScalar(Math.max(0, 1 + k * .8 - k * k * 1.8));
-      p.halo.material.opacity = Math.max(0, .55 * (1 - k));
-      p.halo.position.y = p.p.position.y;
-      p.g.children.forEach((c) => { if (c !== p.p && c !== p.halo) c.visible = false; });
-      if (k >= 1) p.g.visible = false;
-    }
-  });
-
-  // pines: se desvanecen muy cerca o muy lejos
-  pines.forEach(({ z, sp }) => {
-    const d = Math.hypot(X(z.pin[0]) - camera.position.x, Z(z.pin[1]) - camera.position.z);
-    sp.material.opacity = Math.min(1, Math.max(0, (d - 8) / 10)) * Math.min(1, Math.max(0, (260 - d) / 60));
-  });
-
-  // HUD
-  hudT -= dt;
-  if (hudT <= 0 && estado.iniciado) {
-    hudT = .2;
-    const lugar = calcularLugar();
-    if (!lugarActual || lugar.txt !== lugarActual.txt) {
-      lugarActual = lugar;
-      $('lugarTxt').textContent = lugar.txt;
-      $('lugarSub').textContent = lugar.sub;
-      $('lugar').style.setProperty('--acc', lugar.z ? lugar.z.acento : '#ff6b2c');
-      $('lugar').querySelector('.i').style.display = lugar.z ? '' : 'none';
-    }
-    $('stAqui').textContent = mmss(estado.tiempo);
-    $('stPie').textContent = mmss((estado.dist * CFG.escala) / CFG.pie);
-    $('stDist').textContent = metros(estado.dist);
-    $('stReal').textContent = metros(estado.dist * CFG.escala);
-    if (estado.fichaT > 0 && estado.jugando) { estado.fichaT -= .2; if (estado.fichaT <= 0) $('ficha').classList.remove('on'); }
-  }
-  if (cuadroN % 3 === 0 && estado.iniciado) dibujarPlano(mini);
-
-  renderer.render(scene, camera);
-  requestAnimationFrame(cuadro);
-}
-
-// En pantallas verticales abrimos el campo de visión para no ver "por un tubo".
 function ajustarCamara() {
   const a = innerWidth / innerHeight;
   camera.aspect = a;
@@ -1502,19 +557,52 @@ function ajustarCamara() {
 addEventListener('resize', ajustarCamara);
 ajustarCamara();
 
-/* ======================= Inicio ======================= */
+const reloj = new THREE.Clock();
+let t = 0, n = 0, hudT = 0;
+function cuadro() {
+  const dt = Math.min(reloj.getDelta(), .05);
+  t += dt; n++;
+  if (estado.jugando) mover(dt);
+  else if (!estado.iniciado) P.yaw = Math.sin(t * .12) * .5;
+  if (estado.noche !== estado.nocheObj) {
+    const paso = dt / 1.4;
+    estado.noche = estado.nocheObj > estado.noche ? Math.min(estado.nocheObj, estado.noche + paso) : Math.max(estado.nocheObj, estado.noche - paso);
+    aplicarHora(estado.noche);
+  }
+  const vel = Math.hypot(P.vx, P.vy) / PX;
+  camera.position.set(X(P.x), CFG.ojos + Math.sin(P.paso * 1.7) * .045 * Math.min(1, vel / CFG.vel), Z(P.y));
+  camera.rotation.set(P.pitch, P.yaw, 0);
+  cielo.position.copy(camera.position);
+  plaza.actualizar(dt, t);
+  // letreros: se ocultan lejos para no saturar
+  letreros.forEach((sp) => { const d = sp.position.distanceTo(camera.position); sp.material.opacity = Math.max(0, Math.min(1, (70 - d) / 20)); sp.visible = d < 70; });
+
+  hudT -= dt;
+  if (hudT <= 0 && estado.iniciado) {
+    hudT = .2;
+    const l = calcularLugar();
+    if (l.txt !== lugarTxt) { lugarTxt = l.txt; $('lugarTxt').textContent = l.txt; $('lugarSub').textContent = l.sub; $('lugarPunto').style.background = l.acc; }
+    $('stAqui').textContent = mmss(estado.tiempo);
+    $('stPie').textContent = mmss((estado.dist * CFG.mPorUnidad) / CFG.pie);
+    $('stReal').textContent = metros(estado.dist * CFG.mPorUnidad);
+    let cerca = null, dm = 36;
+    plaza.estaciones.forEach((e) => { const d = Math.hypot(e.x - P.x, e.y - P.y); if (d < dm) { dm = d; cerca = e; } });
+    if (cerca !== estacionCerca) { estacionCerca = cerca; mostrarJugar(cerca); }
+  }
+  if (n % 3 === 0 && estado.iniciado) dibujarPlano(mini);
+  renderer.render(scene, camera);
+  requestAnimationFrame(cuadro);
+}
+
 const btn = $('btnComenzar');
-btn.disabled = false;
-btn.textContent = 'Comenzar recorrido';
+btn.disabled = false; btn.textContent = 'Comenzar recorrido';
 window.__perlaLista = true;
 btn.addEventListener('click', () => {
-  $('inicio').hidden = true;
-  $('hud').classList.remove('oculto');
+  $('inicio').hidden = true; $('hud').classList.remove('oculto');
   estado.iniciado = true; estado.jugando = true;
-  P.yaw = 0; P.pitch = -0.04;
+  P.yaw = 0; P.pitch = -0.03;
   canvas.focus({ preventScroll: true });
-  if (estado.sonido) { try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); } catch (e) { /* sin audio */ } }
-  aviso(tactil ? 'Usa el joystick para caminar' : 'Camina con W A S D · arrastra para mirar');
+  aviso(tactil ? 'Usa el joystick y busca los tótems ▶ JUGAR' : 'Camina con W A S D y busca los tótems ▶ JUGAR');
 });
 requestAnimationFrame(cuadro);
 </script>
