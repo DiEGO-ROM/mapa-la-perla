@@ -278,9 +278,9 @@
 
   // ---------- Calles ----------
   const CALLES = [
-    { nombre: 'TEXCOCO', poly: R(-80, -95, 1300, -25), eje: 'x' },
-    { nombre: 'TEXCOCO', poly: R(1200, -95, 1275, 1160), eje: 'y' },
-    { nombre: 'MARIANO OTERO', poly: R(-80, 1080, 1300, 1150), eje: 'x' },
+    { nombre: 'TEXCOCO', poly: R(-1650, -95, 1270, -25), eje: 'x' },
+    { nombre: 'TEXCOCO', poly: R(1200, -95, 1270, 1150), eje: 'y' },
+    { nombre: 'MARIANO OTERO', poly: R(-1650, 1080, 2850, 1150), eje: 'x' },
   ];
 
   // ---------- Íconos de línea (24×24, solo paths para SVG y Canvas) ----------
@@ -384,8 +384,8 @@
 
   // Árboles en espacios abiertos y banquetas
   const arboles = [];
-  for (let x = -40; x <= 1180; x += 55) { arboles.push([x, -14]); arboles.push([x, 1068]); }
-  for (let y = 20; y <= 1050; y += 55) arboles.push([1188, y]);
+  for (let x = -40; x <= 1160; x += 55) { arboles.push([x, -19]); arboles.push([x, 1074]); }   // sobre la banqueta
+  for (let y = 20; y <= 1040; y += 55) arboles.push([1194, y]);
   for (let y = 260; y <= 700; y += 48) { arboles.push([137, y]); arboles.push([241, y]); }
   [[60, 175], [110, 230], [300, 175], [380, 230], [80, 845], [200, 845], [330, 800], [400, 845]].forEach((p) => arboles.push(p));
 

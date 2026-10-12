@@ -143,27 +143,123 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
   const piso = new THREE.Mesh(new THREE.PlaneGeometry(900, 900).rotateX(-Math.PI / 2), std('#bfe39f', { roughness: 1 }));
   piso.position.y = -0.06; piso.receiveShadow = true; suelo.add(piso);
 
-  const L = D.limites;
   const texPiso = baldosa('#f4f1ea', '#e6e1d6', 4); texPiso.repeat.set(1 / 8, 1 / 8);
-  sueloPoligono([[L.x1 + 40, -18], [1190, -18], [1190, 1072], [L.x1 + 40, 1072]], std('#ffffff', { map: texPiso, roughness: .95 }), 0, suelo);
+  /* ---------- Calles ----------
+     Av. Texcoco corre por el norte y da la vuelta (esquina redondeada) para bajar por el oriente
+     hasta llegar en T a Av. Mariano Otero, que pasa de lado a lado por el sur.
+     Todo en píxeles del plano; las calles se alargan hasta la orilla del terreno para que no se vean cortadas. */
+  const L = D.limites;
+  const CA = { norte: [-95, -25], oriente: [1200, 1270], sur: [1080, 1150], lejos: [-1650, 2850], arriba: -1700, abajo: 2750 };
+  const RI = 20, RT = 15;                              // radio de la esquina NE (lado plaza) y de las esquinas de la T
+  const CB = [CA.oriente[0] - RI, CA.norte[1] + RI];  // centro de la curva de Texcoco
+  const BANQ = 12;                                    // ancho de banqueta
+  const camino = () => {
+    const pts = [];
+    const api = {
+      l(x, y) { pts.push([x, y]); return api; },
+      a(cx, cy, r, a0, a1, n = 14) { for (let i = 0; i <= n; i++) { const a = a0 + ((a1 - a0) * i) / n; pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); } return api; },
+      pts,
+    };
+    return api;
+  };
+  const G90 = Math.PI / 2;
+  {
+    const [n0, n1] = CA.norte, [e0, e1] = CA.oriente, [s0, s1] = CA.sur, [xl0, xl1] = CA.lejos;
+    // asfalto: un solo contorno con la curva y la T
+    const asf = camino()
+      .l(xl0, n0).l(CB[0], n0).a(CB[0], CB[1], RI + (n1 - n0), -G90, 0)
+      .l(e1, s0 - RT).a(e1 + RT, s0 - RT, RT, Math.PI, G90, 6)
+      .l(xl1, s0).l(xl1, s1).l(xl0, s1).l(xl0, s0)
+      .l(e0 - RT, s0).a(e0 - RT, s0 - RT, RT, G90, 0, 6)
+      .l(e0, CB[1]).a(CB[0], CB[1], RI, 0, -G90)
+      .l(xl0, n1).pts;
+    sueloPoligono(asf, std('#45464c', { roughness: .95 }), -.04, suelo).castShadow = false;
+    // manzanas con guarnición (banqueta un poco más alta que el arroyo, con contorno)
+    const banqueta = std('#e2ddd2', { roughness: .95 });
+    const pasto = std('#b5dc93', { roughness: 1 });
+    const manzana = (pts, padre = suelo) => {
+      const geo = new THREE.ExtrudeGeometry(forma(pts), { depth: .1, bevelEnabled: false });
+      geo.rotateX(-Math.PI / 2);
+      const m = new THREE.Mesh(geo, banqueta); m.position.y = -.08; m.receiveShadow = true; padre.add(m);
+      bordes(geo, padre, m.position, .35);
+    };
+    // la plaza (con banqueta hacia Texcoco y Mariano Otero)
+    manzana(camino().l(xl0, n1).l(CB[0], n1).a(CB[0], CB[1], RI, -G90, 0).l(e0, s0 - RT).a(e0 - RT, s0 - RT, RT, 0, G90, 6).l(xl0, s0).pts);
+    // del otro lado de la vuelta de Texcoco
+    manzana(camino().l(xl0, CA.arriba).l(xl1, CA.arriba).l(xl1, s0).l(e1 + RT, s0).a(e1 + RT, s0 - RT, RT, G90, Math.PI, 6).l(e1, CB[1]).a(CB[0], CB[1], RI + (n1 - n0), 0, -G90).l(xl0, n0).pts);
+    sueloPoligono(camino().l(xl0, CA.arriba).l(xl1, CA.arriba).l(xl1, s0 - BANQ).l(e1 + RT, s0 - BANQ).l(e1 + BANQ, s0 - RT).l(e1 + BANQ, CB[1]).a(CB[0], CB[1], RI + (n1 - n0) + BANQ, 0, -G90).l(xl0, n0 - BANQ).pts, pasto, .03, suelo);
+    // al sur de Mariano Otero
+    manzana([[xl0, s1], [xl1, s1], [xl1, CA.abajo], [xl0, CA.abajo]]);
+    sueloPoligono([[xl0, s1 + BANQ], [xl1, s1 + BANQ], [xl1, CA.abajo], [xl0, CA.abajo]], pasto, .03, suelo);
+    // terreno vecino al poniente de la plaza
+    sueloPoligono([[xl0, n1 + BANQ], [L.x1 + 40, n1 + BANQ], [L.x1 + 40, s0 - BANQ], [xl0, s0 - BANQ]], pasto, .03, suelo);
+    // piso de la plaza y seto que la separa del vecino
+    sueloPoligono([[L.x1 + 40, n1 + BANQ], [e0 - BANQ, n1 + BANQ], [e0 - BANQ, s0 - BANQ], [L.x1 + 40, s0 - BANQ]], std('#ffffff', { map: texPiso, roughness: .95 }), .03, suelo);
+    bloque(1, .9, (s0 - n1 - 2 * BANQ) * S, std('#5fbf72', { roughness: 1 }), X(L.x1 + 40) - .5, .45, Z((n1 + s0) / 2), suelo);
 
-  const asfalto = std('#3b3c42', { roughness: .95 });
-  const raya = basico('#f5f2ea');
-  D.CALLES.forEach((c) => {
-    sueloPoligono(c.poly, asfalto, 0.01, suelo);
-    const [[x1, y1], , [x2, y2]] = c.poly;
-    if (c.eje === 'x') {
-      const ym = (y1 + y2) / 2;
-      for (let x = x1 + 10; x < x2 - 10; x += 40) caja(16 * S, .02, 1.6 * S, raya, X(x + 8), .04, Z(ym), suelo).castShadow = false;
-    } else {
-      const xm = (x1 + x2) / 2;
-      for (let y = y1 + 10; y < y2 - 10; y += 40) caja(1.6 * S, .02, 16 * S, raya, X(xm), .04, Z(y + 8), suelo).castShadow = false;
-    }
-  });
-  const banqueta = std('#dcd7cc', { roughness: .95 });
-  sueloPoligono([[L.x1 + 40, -25], [1200, -25], [1200, -18], [L.x1 + 40, -18]], banqueta, .03, suelo);
-  sueloPoligono([[L.x1 + 40, 1072], [1200, 1072], [1200, 1080], [L.x1 + 40, 1080]], banqueta, .03, suelo);
-  sueloPoligono([[1190, -25], [1200, -25], [1200, 1080], [1190, 1080]], banqueta, .03, suelo);
+    // marcas viales discretas: línea central punteada, cruces peatonales y alto
+    const pintura = basico('#d6d3cc');
+    const raya = (x, y, largo, ancho, ang) => { const r = caja(largo * S, .02, ancho * S, pintura, X(x), -.02, Z(y), suelo); r.rotation.y = ang; r.castShadow = false; r.receiveShadow = false; };
+    const yN = (n0 + n1) / 2, xE = (e0 + e1) / 2, yS = (s0 + s1) / 2;
+    const libreDeCruces = (v, cruces) => !cruces.some(([a, b]) => v > a && v < b);
+    for (let x = xl0; x < CB[0] - 26; x += 40) raya(x + 8, yN, 16, 1.4, 0);
+    for (let y = CB[1] + 26; y < s0 - 34; y += 40) raya(xE, y + 8, 16, 1.4, Math.PI / 2);
+    const rc = RI + (n1 - n0) / 2;
+    for (let a = -G90 + .12; a < -.1; a += .34) raya(CB[0] + rc * Math.cos(a), CB[1] + rc * Math.sin(a), 12, 1.4, -a - G90);
+    const crucesSur = [[e0 - 30, e1 + 30], [160, 220]];
+    for (let x = xl0; x < xl1; x += 40) if (libreDeCruces(x + 8, crucesSur)) raya(x + 8, yS, 16, 1.4, 0);
+    // cruce peatonal: franjas paralelas al sentido de los autos
+    const cebra = (x0, y0, x1, y1, vertical) => {
+      if (vertical) for (let y = y0 + 3; y < y1 - 2; y += 8) raya((x0 + x1) / 2, y + 2, x1 - x0, 4, 0);
+      else for (let x = x0 + 3; x < x1 - 2; x += 8) raya(x + 2, (y0 + y1) / 2, y1 - y0, 4, Math.PI / 2);
+    };
+    cebra(165, s0, 185, s1, true);                          // frente a la entrada principal (Calzada)
+    cebra(e0 - 26, s0, e0 - 8, s1, true);                   // Mariano Otero, antes de la T
+    cebra(e1 + 8, s0, e1 + 26, s1, true);                   // Mariano Otero, después de la T
+    cebra(e0, s0 - 26, e1, s0 - 8, false);                  // Texcoco al llegar a la T
+    cebra(CB[0] - 24, n0, CB[0] - 6, n1, true);             // Texcoco antes de la vuelta
+    cebra(e0, CB[1] + 6, e1, CB[1] + 24, false);            // Texcoco después de la vuelta
+    raya(xE - 17, s0 - 30, 33, 1.6, 0);                    // línea de alto
+
+    // nombres pintados en el asfalto, en gris claro
+    const nombre = (texto, x, y, ang, largo) => {
+      const t = lienzo(1024, 96, (ctx, W, H) => { ctx.clearRect(0, 0, W, H); ajustar(ctx, texto, W - 20, 64, 800); ctx.fillStyle = 'rgba(230,227,220,.75)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(texto, W / 2, H / 2); });
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(largo * S, largo * S * 96 / 1024).rotateX(-Math.PI / 2), basico('#ffffff', { map: t, transparent: true, depthWrite: false }));
+      m.position.set(X(x), -.015, Z(y)); m.rotation.y = ang; m.userData.noFusionar = true; suelo.add(m);
+    };
+    // orientados para leerse bien desde la cámara del mapa
+    nombre('AV. MARIANO OTERO', 640, yS + 17, 0, 170);
+    nombre('AV. MARIANO OTERO', -500, yS + 17, 0, 170);
+    nombre('AV. TEXCOCO', 600, yN + 17, 0, 120);
+    nombre('AV. TEXCOCO', xE - 17, 520, -Math.PI / 2, 120);
+
+    // semáforos en la T y postes de luz sobre la banqueta de la plaza
+    const negro = std('#2a2b30');
+    [[e0 - 6, s0 - 6], [e1 + 6, s0 - 6], [e1 + 6, s1 + 6]].forEach(([x, y], i) => {
+      const g = new THREE.Group(); g.position.set(X(x), 0, Z(y)); g.rotation.y = i === 2 ? Math.PI : 0; suelo.add(g);
+      caja(.18, 4.2, .18, negro, 0, 2.1, 0, g);
+      caja(.5, 1.3, .4, negro, 0, 4.3, 0, g);
+      ['#ff4d4d', '#ffc31f', '#3ddc84'].forEach((c, k) => { const f = malla(new THREE.SphereGeometry(.12, 8, 6), basico(k === (i % 3) ? c : '#555'), 0, 4.7 - k * .38, .22, g, false); f.castShadow = false; });
+    });
+    const postes = [];
+    for (let x = -12; x < CB[0] - 10; x += 110) postes.push([x, n1 + 3, 0]);
+    for (let y = 47; y < s0 - 30; y += 110) postes.push([e0 - 3, y, -G90]);
+    for (let x = -12; x < e0 - 30; x += 110) if (Math.abs(x - 317) > 20) postes.push([x, s0 - 3, Math.PI]);
+    const poste = new THREE.InstancedMesh(new THREE.CylinderGeometry(.08, .1, 5.2, 6).translate(0, 2.6, 0), negro, postes.length);
+    const brazo = new THREE.InstancedMesh(new THREE.BoxGeometry(.12, .12, 1.4).translate(0, 5.1, -.6), negro, postes.length);
+    const foco = new THREE.InstancedMesh(new THREE.BoxGeometry(.5, .14, .32).translate(0, 5.02, -1.25), basico('#fff4cf'), postes.length);
+    const m4 = new THREE.Matrix4();
+    postes.forEach(([x, y, a], i) => { m4.makeRotationY(a).setPosition(X(x), 0, Z(y)); poste.setMatrixAt(i, m4); brazo.setMatrixAt(i, m4); foco.setMatrixAt(i, m4); });
+    poste.castShadow = true; suelo.add(poste, brazo, foco);
+
+    // parada de camión frente a la plaza, junto a la entrada principal
+    const parada = new THREE.Group(); parada.position.set(X(317), 0, Z(s0 - 5)); suelo.add(parada);
+    caja(4, .12, 1.3, negro, 0, 2.7, -.1, parada);
+    const vid = caja(4, 2.2, .06, new THREE.MeshStandardMaterial({ color: '#bfe6ff', transparent: true, opacity: .35 }), 0, 1.5, -.7, parada); vid.castShadow = false;
+    [-1.9, 1.9].forEach((x) => caja(.1, 2.7, .1, negro, x, 1.35, -.7, parada));
+    bloque(3, .15, .45, std('#c9864a'), 0, .55, -.45, parada);
+    const sp = letreroPlano('PARADA', 1.4, .5, { fondo: '#ffffff' }, parada); sp.position.set(1.5, 3.1, -.1);
+  }
 
   const E = D.ESPACIOS;
   const texCalzada = baldosa('#ffd9c6', '#ffbf9f', 4); texCalzada.repeat.set(.25, .25);
@@ -930,24 +1026,44 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
     });
     troncos.castShadow = copas.castShadow = true;
     suelo.add(troncos, copas);
+    // cajete de tierra bajo los árboles de la banqueta
+    const enBanqueta = D.arboles.filter(([x, y]) => y < -10 || y > 1070 || x > 1190);
+    const cajetes = new THREE.InstancedMesh(new THREE.BoxGeometry(1.5, .04, 1.5), std('#7a5a40', { roughness: 1 }), enBanqueta.length);
+    enBanqueta.forEach(([x, y], i) => { m4.makeTranslation(X(x), .03, Z(y)); cajetes.setMatrixAt(i, m4); });
+    cajetes.receiveShadow = true; suelo.add(cajetes);
   }
 
-  // ---------- Autos ----------
+  // ---------- Autos: siguen los carriles (circulan por la derecha y dan vuelta en la esquina y en la T) ----------
   {
+    const [n0, n1] = CA.norte, [e0, e1] = CA.oriente, [s0, s1] = CA.sur;
+    const yN = (n0 + n1) / 2, xE = (e0 + e1) / 2, yS = (s0 + s1) / 2, c = 17.5, R0 = RI + (n1 - n0) / 2;
+    const ruta = (pts) => { const acum = [0]; for (let i = 1; i < pts.length; i++) acum.push(acum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); return { pts, acum, total: acum[acum.length - 1] }; };
+    const TC = [e0 - RT, s0 - RT];   // centro de las vueltas en la T
+    const rutas = [
+      ruta(camino().l(-1200, yN + c).l(CB[0], yN + c).a(CB[0], CB[1], R0 - c, -G90, 0).l(xE - c, TC[1]).a(TC[0], TC[1], yS - c - TC[1], 0, G90, 8).l(-1200, yS - c).pts),
+      ruta(camino().l(-1200, yS + c).l(TC[0], yS + c).a(TC[0], TC[1], yS + c - TC[1], G90, 0, 10).l(xE + c, CB[1]).a(CB[0], CB[1], R0 + c, 0, -G90).l(-1200, yN - c).pts),
+      ruta([[2100, yS - c], [-1200, yS - c]]),
+      ruta([[-1200, yS + c], [2100, yS + c]]),
+    ];
     const colores = ['#ff6b2c', '#3d6bff', '#ffffff', '#ffc31f', '#1fb36b', '#ff5fa2', '#141414'];
-    for (let i = 0; i < (movil ? 7 : 10); i++) {
+    const n = movil ? 7 : 10;
+    for (let i = 0; i < n; i++) {
       const g = new THREE.Group(); g.userData.vivo = true;
-      const c = std(colores[i % colores.length], { roughness: .4 });
-      caja(4, 1, 1.9, c, 0, .8, 0, g); caja(2.2, .8, 1.7, std('#9fd3ff', { roughness: .2 }), -.2, 1.6, 0, g);
+      const col = std(colores[i % colores.length], { roughness: .4 });
+      caja(4, 1, 1.9, col, 0, .8, 0, g); caja(2.2, .8, 1.7, std('#9fd3ff', { roughness: .2 }), -.2, 1.6, 0, g);
       [[-1.3, .9], [1.3, .9], [-1.3, -.9], [1.3, -.9]].forEach(([a, b]) => { const r = malla(new THREE.CylinderGeometry(.38, .38, .25, 10), std(INK), a, .38, b, g); r.rotation.x = Math.PI / 2; });
       suelo.add(g);
-      const calle = i % 3; const dir = i % 2 ? 1 : -1; const v = 9 + (i % 4) * 2;
-      let pos = (i * 97) % 1300;
+      const rt = rutas[i % rutas.length], enRuta = Math.ceil((n - (i % rutas.length)) / rutas.length);
+      const v = (9 + (i % 3) * 1.5) / S;
+      let s = ((Math.floor(i / rutas.length) + (i % rutas.length) * .37) / enRuta) * rt.total, k = 0;
       animados.push((dt) => {
-        pos += dir * v * dt / S;
-        if (pos > 1250) pos = -60; if (pos < -60) pos = 1250;
-        if (calle === 1) { g.position.set(X(1222 + (dir > 0 ? 0 : 30)), 0, Z(pos - 80)); g.rotation.y = dir > 0 ? -Math.PI / 2 : Math.PI / 2; }
-        else { const y = calle === 0 ? -60 + (dir > 0 ? 18 : -18) : 1115 + (dir > 0 ? 18 : -18); g.position.set(X(pos), 0, Z(y)); g.rotation.y = dir > 0 ? 0 : Math.PI; }
+        s += v * dt;
+        if (s >= rt.total) { s -= rt.total; k = 0; }
+        while (k < rt.pts.length - 2 && rt.acum[k + 1] < s) k++;
+        const [ax, ay] = rt.pts[k], [bx, by] = rt.pts[k + 1];
+        const t = (s - rt.acum[k]) / (rt.acum[k + 1] - rt.acum[k] || 1);
+        g.position.set(X(ax + (bx - ax) * t), -.04, Z(ay + (by - ay) * t));
+        g.rotation.y = Math.atan2(-(by - ay), bx - ax);
       });
     }
   }
