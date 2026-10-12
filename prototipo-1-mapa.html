@@ -65,6 +65,7 @@
   .pin .ico svg { width: 22px; height: 22px; }
   .pin .nom { background: #fff; border: 1.5px solid var(--ink); font-size: 10.5px; font-weight: 900; padding: 2px 6px; text-transform: uppercase; letter-spacing: .02em; }
   .pin .estr { position: absolute; top: -8px; right: -10px; background: var(--amarillo); border: 1.5px solid var(--ink); font-size: 10px; font-weight: 900; padding: 0 4px; }
+  .pin::after { content: ''; width: 3px; height: 16px; background: var(--ink); margin-top: -3px; }
   .pin:hover .ico, .pin.sel .ico { transform: translateY(-4px) scale(1.08); }
   .pin.objetivo .ico { animation: brinco .7s ease-in-out infinite alternate; }
   @keyframes brinco { to { transform: translateY(-10px); } }
@@ -259,7 +260,7 @@ renderer.toneMappingExposure = 1.05;
 
 const plaza = crearPlaza(D, { modo: 'iso', movil });
 const scene = plaza.scene;
-window.__perla = { renderer, scene };
+window.__perla = { renderer, scene, volar: (px, py, n, zoom) => volarA(px, py, n, zoom) };
 // iOS/Safari: evita el zoom de página con gestos y recupera la escena si el sistema libera la GPU
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 document.addEventListener('dblclick', (e) => e.preventDefault());
@@ -340,7 +341,10 @@ function construirEtiquetas() {
     el.style.setProperty('--c', D.CATEGORIAS[t.cat].color);
     el.innerHTML = `<i></i>${t.nombre}`;
     capa.appendChild(el);
-    etiquetas.push({ el, pos: new THREE.Vector3(X(t.centro[0]), top, Z(t.centro[1])), area: t.area, ancho: t.nombre.length * 6.4 + 22, tienda: t, prioridad: 0 });
+    // la etiqueta va sobre el frente de la tienda (donde está su letrero), o al centro si no da a un pasillo
+    const f = plaza.frentes.get(t);
+    const [ex, ey] = f ? [f.x + f.nx * 4, f.y + f.ny * 4] : t.centro;
+    etiquetas.push({ el, pos: new THREE.Vector3(X(ex), top, Z(ey)), area: t.area, ancho: t.nombre.length * 6.4 + 22, tienda: t, prioridad: 0 });
   });
   zonasDelNivel(nivel).forEach((z) => {
     const el = document.createElement('button');
@@ -350,8 +354,10 @@ function construirEtiquetas() {
     el.innerHTML = `<span class="ico">${icono(z.icono)}</span><span class="nom">${z.nombre}</span>${e ? `<span class="estr">${'★'.repeat(e)}</span>` : ''}`;
     el.addEventListener('click', (ev) => { ev.stopPropagation(); seleccionarZona(z); });
     capa.appendChild(el);
-    const h = z.id === 'liverpool' ? nivel * MUNDO.ALTO_NIVEL + MUNDO.ALTO_LOCAL + 3 : z.nivel * MUNDO.ALTO_NIVEL + (z.tienda ? MUNDO.ALTO_LOCAL + 3 : 13);
-    etiquetas.push({ el, pos: new THREE.Vector3(X(z.pin[0]), h, Z(z.pin[1])), zona: z, prioridad: 1, ancho: 90 });
+    const h = z.id === 'liverpool' ? nivel * MUNDO.ALTO_NIVEL + MUNDO.ALTO_LOCAL + 3 : z.nivel * MUNDO.ALTO_NIVEL + (z.tienda ? MUNDO.ALTO_LOCAL + 3 : 7);
+    // el pin va al centro de la experiencia, con un poste que lo une al piso
+    const [zx, zy] = z.forma && z.forma.tipo === 'circ' ? [z.forma.cx, z.forma.cy] : z.forma ? D.centroide(z.forma.puntos) : z.pin;
+    etiquetas.push({ el, pos: new THREE.Vector3(X(zx), h, Z(zy)), zona: z, prioridad: 1, ancho: 90 });
   });
   camCambio = true;
 }

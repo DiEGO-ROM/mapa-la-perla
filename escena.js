@@ -5,6 +5,7 @@
 */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { estructuraNivel } from './estructura.js';
 
 const S = 0.2;                 // unidades 3D por píxel del plano
 const ALTO_NIVEL = 5.4;        // altura de cada nivel
@@ -110,106 +111,6 @@ function distSeg(px, py, ax, ay, bx, by) {
   return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
 }
 
-/* ---------------- estructura continua de cada nivel ----------------
-   En el plano los locales están separados por una franja blanca que en la plaza real es muro.
-   Se rasteriza cada nivel a 1 px, se hace un cierre morfológico (dilatar y erosionar) que tapa
-   las franjas angostas entre locales sin crecer las fachadas, y los rellenos se devuelven como
-   polígonos. macizo(x, y) dice si un punto del plano está construido. */
-function dilatar(src, w, h, r) {
-  const tmp = new Uint8Array(w * h), out = new Uint8Array(w * h);
-  const acc = new Int32Array(Math.max(w, h) + 1);
-  for (let j = 0; j < h; j++) {
-    const o = j * w;
-    for (let i = 0; i < w; i++) acc[i + 1] = acc[i] + src[o + i];
-    for (let i = 0; i < w; i++) tmp[o + i] = acc[Math.min(w, i + r + 1)] - acc[Math.max(0, i - r)] > 0 ? 1 : 0;
-  }
-  for (let i = 0; i < w; i++) {
-    for (let j = 0; j < h; j++) acc[j + 1] = acc[j] + tmp[j * w + i];
-    for (let j = 0; j < h; j++) out[j * w + i] = acc[Math.min(h, j + r + 1)] - acc[Math.max(0, j - r)] > 0 ? 1 : 0;
-  }
-  return out;
-}
-const invertir = (a) => { for (let i = 0; i < a.length; i++) a[i] = 1 - a[i]; return a; };
-function simplificar(pts, tol) {
-  if (pts.length < 3) return pts;
-  const [ax, ay] = pts[0], [bx, by] = pts[pts.length - 1];
-  let max = 0, k = 0;
-  for (let i = 1; i < pts.length - 1; i++) { const d = distSeg(pts[i][0], pts[i][1], ax, ay, bx, by); if (d > max) { max = d; k = i; } }
-  if (max <= tol) return [pts[0], pts[pts.length - 1]];
-  return simplificar(pts.slice(0, k + 1), tol).slice(0, -1).concat(simplificar(pts.slice(k), tol));
-}
-// contornos exteriores de una máscara (interior a la izquierda); los huecos se ignoran
-function contornos(M, w, h, areaMin) {
-  const W1 = w + 1, sig = new Map();
-  const arista = (ax, ay, bx, by) => { const k = ay * W1 + ax, l = sig.get(k); if (l) l.push(by * W1 + bx); else sig.set(k, [by * W1 + bx]); };
-  const en = (i, j) => i >= 0 && j >= 0 && i < w && j < h && M[j * w + i] === 1;
-  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
-    if (!M[j * w + i]) continue;
-    if (!en(i, j - 1)) arista(i + 1, j, i, j);
-    if (!en(i, j + 1)) arista(i, j + 1, i + 1, j + 1);
-    if (!en(i - 1, j)) arista(i, j, i, j + 1);
-    if (!en(i + 1, j)) arista(i + 1, j + 1, i + 1, j);
-  }
-  const lazos = [];
-  for (const [inicio] of sig) {
-    while (sig.get(inicio) && sig.get(inicio).length) {
-      const pts = []; let v = inicio, dx = 0, dy = 0;
-      do {
-        const l = sig.get(v);
-        const x = v % W1, y = (v - x) / W1;
-        let idx = 0;
-        if (l.length > 1) { const k = l.findIndex((u) => (u % W1) - x === dy && ((u - (u % W1)) / W1) - y === -dx); if (k >= 0) idx = k; }
-        const u = l.splice(idx, 1)[0];
-        const ux = u % W1, uy = (u - ux) / W1;
-        if (ux - x !== dx || uy - y !== dy) pts.push([x, y]);
-        dx = ux - x; dy = uy - y; v = u;
-      } while (v !== inicio && sig.get(v) && sig.get(v).length);
-      let a = 0;
-      for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) a += pts[j][0] * pts[i][1] - pts[i][0] * pts[j][1];
-      if (a / 2 < -areaMin) lazos.push(pts);
-    }
-  }
-  return lazos;
-}
-function estructuraNivel(polys, radio = 8) {
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  polys.forEach((p) => p.forEach(([x, y]) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }));
-  const m = radio + 4;
-  x0 = Math.floor(x0) - m; y0 = Math.floor(y0) - m;
-  const w = Math.ceil(x1) - x0 + m, h = Math.ceil(y1) - y0 + m;
-  const base = new Uint8Array(w * h);
-  polys.forEach((p) => {
-    let ya = Infinity, yb = -Infinity;
-    p.forEach(([, y]) => { ya = Math.min(ya, y); yb = Math.max(yb, y); });
-    for (let j = Math.max(0, Math.floor(ya - y0)); j < Math.min(h, Math.ceil(yb - y0) + 1); j++) {
-      const yc = y0 + j + .5, xs = [];
-      for (let i = 0, k = p.length - 1; i < p.length; k = i++) {
-        const [ax, ay] = p[k], [bx, by] = p[i];
-        if ((ay > yc) !== (by > yc)) xs.push(ax + ((yc - ay) * (bx - ax)) / (by - ay));
-      }
-      xs.sort((a, b) => a - b);
-      for (let q = 0; q + 1 < xs.length; q += 2) {
-        const ia = Math.max(0, Math.ceil(xs[q] - x0 - .5)), ib = Math.min(w - 1, Math.floor(xs[q + 1] - x0 - .5));
-        for (let i = ia; i <= ib; i++) base[j * w + i] = 1;
-      }
-    }
-  });
-  const cierre = invertir(dilatar(invertir(dilatar(base, w, h, radio)), w, h, radio));
-  const relleno = new Uint8Array(w * h);
-  for (let i = 0; i < relleno.length; i++) relleno[i] = cierre[i] && !base[i] ? 1 : 0;
-  // el relleno se mete 1 px en cada local para que no queden rendijas
-  const grueso = dilatar(relleno, w, h, 1);
-  for (let i = 0; i < grueso.length; i++) grueso[i] &= cierre[i];
-  const rellenos = contornos(grueso, w, h, 30).map((pts) => {
-    const s = simplificar([...pts, pts[0]], .9).slice(0, -1);
-    return s.map(([x, y]) => [x0 + x, y0 + y]);
-  }).filter((p) => p.length >= 3);
-  const macizo = (x, y) => {
-    const i = Math.floor(x - x0), j = Math.floor(y - y0);
-    return i >= 0 && j >= 0 && i < w && j < h && cierre[j * w + i] === 1;
-  };
-  return { rellenos, macizo };
-}
 
 /* ======================================================================= */
 export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
@@ -286,7 +187,8 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
   const ALTO_MURO = ALTO_LOCAL - .3;
   const baseNivel = (n) => n * ALTO_NIVEL + (n ? .18 : 0);
   const altoTapa = (t) => (t.cat === 'ancla' ? .8 : t.cat === 'local' ? .22 : .4);
-  const muroMats = [std('#e6e0d4', { roughness: .9 }), std('#fbf8f2', { roughness: .85 })];   // [azotea, muros]
+  const texAzotea = baldosa('#cbc3b4', '#bdb4a3', 2); texAzotea.repeat.set(.2, .2);
+  const muroMats = [std('#ffffff', { map: texAzotea, roughness: .95 }), std('#fbf8f2', { roughness: .85 })];   // [azotea, muros]
   const pilastra = std('#ddd5c6', { roughness: .85 });
   const cacheMat = {}, cacheFascia = {};
   const colorDe = (t) => (t.cat === 'local' ? '#cfc7b8' : COLOR_TIENDA[t.nombre] || D.CATEGORIAS[t.cat].color);
@@ -302,7 +204,13 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
   }
   const fasciaDe = (color) => (cacheFascia[color] = cacheFascia[color] || std(color, { roughness: .55 }));
   const extruir = (poly, alto) => new THREE.ExtrudeGeometry(forma(poly), { depth: alto, bevelEnabled: false }).rotateX(-Math.PI / 2);
-  const estructuras = D.NIVELES.map((nv) => estructuraNivel(nv.tiendas.map((t) => t.poly)));
+  const VACIOS = [E.calzada, E.plazaNorte, E.plazaSur, E.diagonalNE, E.diagonalSE, E.rotonda];
+  const formasZona = (n) => D.zonas.filter((z) => z.nivel === n && z.forma).map((z) => (z.forma.tipo === 'circ' ? z.forma : z.forma.puntos));
+  const estructuras = D.NIVELES.map((nv) => {
+    const polys = nv.tiendas.map((t) => t.poly);
+    if (nv.id === 0) return estructuraNivel(polys, { espacios: [E.calzada, E.calzadaSur, E.plazaNorte, E.plazaSur, E.diagonalNE, E.diagonalSE, E.rotonda, ...formasZona(0)], limites: [-20, -40, 1215, 1095] });
+    return estructuraNivel(polys, { losa: [LOSA_EXT, LOSA_SO], vacios: VACIOS, espacios: formasZona(nv.id), limites: [0, -4, 1195, 1060] });
+  });
   const tiendasMallas = [], tapasMallas = [], murosGeo = [[], [], []];
   D.NIVELES.forEach((nv) => {
     const n = nv.id, y0 = baseNivel(n);
@@ -336,30 +244,36 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
   // ---------- Frentes de tienda: vitrina, franja de color, pilastras, toldo y letrero ----------
   const letrerosAtlas = [];
   const vidrio = std('#2a3a4c', { roughness: .1, metalness: .5, emissive: '#ffd59a', emissiveIntensity: .05 });
-  const libre = (x, y, n) => {
-    if (estructuras[n].macizo(x, y)) return false;
-    if (n === 0) return !(y < -16 || y > 1070 || x > 1188 || x < L.x1 + 45);
-    return D.enPoligono(LOSA_EXT, x, y) || D.enPoligono(LOSA_SO, x, y);
-  };
+  // Un frente solo puede dar a espacio público (calle, calzada, plazas o pasillo junto a un vacío).
+  // Entre los posibles se prefiere el que mira a los espacios interiores de la plaza y luego el más largo.
+  const ESPACIOS_INT = [E.calzada, E.calzadaSur, E.plazaNorte, E.plazaSur, E.diagonalNE, E.diagonalSE];
+  const haciaPlaza = (x, y) => ESPACIOS_INT.some((p) => D.enPoligono(p, x, y)) || Math.hypot(x - E.rotonda.cx, y - E.rotonda.cy) < E.rotonda.r + 30;
   function frentesDe(t, n) {
-    const p = t.poly, out = [];
+    const p = t.poly, out = [], est = estructuras[n];
     for (let i = 0; i < p.length; i++) {
       const [ax, ay] = p[i], [bx, by] = p[(i + 1) % p.length];
       const len = Math.hypot(bx - ax, by - ay);
-      if (len < 16) continue;
+      if (len < 10) continue;
       let nx = (by - ay) / len, ny = -(bx - ax) / len;
       const mx = (ax + bx) / 2, my = (ay + by) / 2;
       if (D.enPoligono(p, mx + nx * 4, my + ny * 4)) { nx = -nx; ny = -ny; }
-      // el frente debe dar a un pasillo o espacio abierto, no a un muro
-      const abierto = [3, 9, 15].every((d) => libre(mx + nx * d, my + ny * d, n));
-      if (abierto) out.push({ mx, my, nx, ny, len });
+      // al menos dos de tres puntos de la orilla deben asomarse a espacio público
+      const asoma = [.2, .5, .8].filter((s) => {
+        const x = ax + (bx - ax) * s, y = ay + (by - ay) * s;
+        return [4, 10].every((d) => est.publico(x + nx * d, y + ny * d));
+      }).length;
+      if (asoma < 2) continue;
+      if (n === 0 && (my + ny * 10 < -16 || my + ny * 10 > 1072 || mx + nx * 10 > 1190)) continue;
+      const plaza = [20, 45, 80].some((d) => haciaPlaza(mx + nx * d, my + ny * d));
+      out.push({ mx, my, nx, ny, len, puntos: len * (plaza ? 2 : 1) });
     }
-    out.sort((a, b) => b.len - a.len);
+    out.sort((a, b) => b.puntos - a.puntos);
     const elegidos = out.slice(0, 1);
     if (out[1] && out[1].len > 40 && Math.abs(out[1].nx * out[0].nx + out[1].ny * out[0].ny) < .5) elegidos.push(out[1]);
     return elegidos;
   }
   const blancoBasico = basico('#ffffff');
+  const frentes = new Map();   // tienda -> su frente principal (para poner la etiqueta ahí)
   D.NIVELES.forEach((nv) => {
     const n = nv.id, y0 = baseNivel(n);
     nv.tiendas.forEach((t) => {
@@ -379,11 +293,13 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
           const toldo = caja(ancho * .8, .14, 1.3, fasciaDe(color), 0, 2.85, .8, g); toldo.rotation.x = .32;
           bordes(toldo.geometry, toldo);
           for (let i = -2; i <= 2; i += 2) { const fr = caja(ancho * .8 / 7, .16, 1.32, blancoBasico, i * ancho * .8 / 7, 2.85, .8, g); fr.rotation.x = .32; fr.castShadow = false; }
-          if (fps && (k === 0 || (f.len > 50 && !movil))) {
-            const w = Math.min(ancho * .8, Math.max(3, t.nombre.length * .55 + 1.6), 13);
-            letrerosAtlas.push({ texto: t.nombre, acento: color, w, h: .82, grupo: g, pos: [0, ALTO_MURO - .45, .22] });
-          }
         }
+        // el nombre va en la franja de color del frente, en los tres niveles y en los dos mapas
+        if (!local && (k === 0 || (f.len > 50 && !movil))) {
+          const w = Math.min(ancho * .86, Math.max(3, t.nombre.length * .55 + 1.6), 13);
+          letrerosAtlas.push({ texto: t.nombre, acento: color, w, h: .82, grupo: g, pos: [0, ALTO_MURO - .45, .22], nivel: n });
+        }
+        if (k === 0) frentes.set(t, { x: f.mx, y: f.my, nx: f.nx, ny: f.ny, nivel: n });
       });
     });
   });
@@ -394,6 +310,16 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
   const madera = std('#c9864a'); const maderaClara = std('#e8b77e'); const metal = std('#4a4d55', { metalness: .4, roughness: .45 });
   const blanco = std('#ffffff'); const agua = std('#5ec4ff', { roughness: .08, metalness: .1, transparent: true, opacity: .88 });
   const colorMat = PALETA.map((c) => std(c, { roughness: .55 }));
+  const pielMats = ['#ffd8b0', '#c8955c', '#8a5a3a'].map((c) => std(c));
+  const pantalon = std('#3a3f4a');
+  // persona sencilla de juguete (piernas, torso de color y cabeza)
+  function persona(padre, x, z, i, esc = 1) {
+    const g = new THREE.Group(); g.position.set(x, 0, z); g.scale.setScalar(esc); padre.add(g);
+    caja(.34, .8, .26, pantalon, 0, .4, 0, g);
+    caja(.52, .75, .32, colorMat[i % 6], 0, 1.18, 0, g);
+    malla(new THREE.SphereGeometry(.22, 10, 8), pielMats[i % 3], 0, 1.78, 0, g);
+    return g;
+  }
   const gotaTex = lienzo(64, 64, (ctx) => { const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, 64, 64); });
 
   // Partículas de agua reutilizables
@@ -745,7 +671,7 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
   /* ----- Foro Abierto: escenario con arco de luces, pantalla animada y reflectores ----- */
   {
     // el escenario cruza la diagonal y mira hacia el suroeste, por donde llega la gente
-    const sx = X(768), sz = Z(700);
+    const sx = X(756), sz = Z(712);
     const foro = new THREE.Group(); foro.position.set(sx, 0, sz); foro.rotation.y = Math.atan2(-.59, .8); props.add(foro);
     // en el grupo, +z apunta hacia el público
     bloque(11, 1.4, 7, std(INK), 0, .7, 0, foro);
@@ -767,7 +693,172 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
     });
     // bancas para el público
     for (let fila = 0; fila < 2; fila++) bloque(8, .5, .8, colorMat[fila + 3], 0, .25, 5.4 + fila * 1.7, foro);
-    obstaculos.push([[738, 668], [798, 668], [798, 730], [738, 730]]);
+    obstaculos.push([[726, 680], [786, 680], [786, 742], [726, 742]]);
+  }
+
+  /* ---------- Más vida en las experiencias: borde de color, gente y detalles ---------- */
+  {
+    // franja de color en la orilla de cada experiencia para que se lea como un lugar
+    const bordeZona = (puntos, color) => {
+      const m = std(color, { roughness: .5 });
+      for (let i = 0; i < puntos.length; i++) {
+        const [ax, ay] = puntos[i], [bx, by] = puntos[(i + 1) % puntos.length];
+        const len = Math.hypot(bx - ax, by - ay) * S; if (len < .5) continue;
+        const b = caja(len + .5, .08, .5, m, X((ax + bx) / 2), .1, Z((ay + by) / 2), props);
+        b.rotation.y = -Math.atan2(by - ay, bx - ax); b.castShadow = false;
+      }
+    };
+    ['cancha', 'pabellon', 'rampas', 'patio', 'foro'].forEach((id) => { const z = D.zona(id); bordeZona(z.forma.puntos, z.acento); });
+
+    /* --- La Cancha: malla ciclónica, lámparas y jugadores --- */
+    {
+      const z = D.zona('cancha'); const [[x1, y1], , [x2, y2]] = z.forma.puntos;
+      const texMalla = lienzo(64, 64, (ctx, W, H) => {
+        ctx.strokeStyle = '#9aa3ad'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(W, H); ctx.moveTo(W, 0); ctx.lineTo(0, H); ctx.stroke();
+      });
+      const matMalla = new THREE.MeshBasicMaterial({ map: texMalla, transparent: true, alphaTest: .3, side: THREE.DoubleSide, toneMapped: false });
+      const malla2 = (ax, ay, bx, by) => {
+        const len = Math.hypot(bx - ax, by - ay) * S, alto = 3.2;
+        const g = new THREE.PlaneGeometry(len, alto);
+        const uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * len / 1.2, uv.getY(i) * alto / 1.2);
+        const m = new THREE.Mesh(g, matMalla); m.position.set(X((ax + bx) / 2), alto / 2, Z((ay + by) / 2)); m.rotation.y = -Math.atan2(by - ay, bx - ax); props.add(m);
+        const n = Math.max(1, Math.round(len / 3.5));
+        for (let i = 0; i <= n; i++) caja(.14, alto + .1, .14, metal, X(ax + ((bx - ax) * i) / n), alto / 2, Z(ay + ((by - ay) * i) / n), props);
+        caja(len, .1, .1, metal, X((ax + bx) / 2), alto, Z((ay + by) / 2), props).rotation.y = -Math.atan2(by - ay, bx - ax);
+      };
+      const xm = (x1 + x2) / 2;
+      malla2(x1 + 3, y1 + 3, x2 - 3, y1 + 3);
+      malla2(x1 + 3, y1 + 3, x1 + 3, y2 - 34);
+      malla2(x2 - 3, y1 + 3, x2 - 3, y2 - 34);
+      // lámparas altas en las esquinas
+      [[x1 + 3, y1 + 3], [x2 - 3, y1 + 3], [x1 + 3, y2 - 34], [x2 - 3, y2 - 34]].forEach(([x, y]) => {
+        caja(.22, 8, .22, std(INK), X(x), 4, Z(y), props);
+        bloque(1.3, .45, .8, std('#2a2a30'), X(x), 8.1, Z(y), props);
+        caja(1.1, .12, .6, basico('#fff6c9'), X(x), 7.85, Z(y), props).castShadow = false;
+      });
+      // jugadores: uno tira, dos defienden y el balón va y viene
+      const cz = Z(y1 + 30);
+      const juego = new THREE.Group(); juego.userData.vivo = true; props.add(juego);
+      [[-2.2, 0], [1.6, -1.2], [2.4, 1.6]].forEach(([dx, dz], i) => persona(juego, X(xm) + dx, cz + dz, i + 1, 1.25));
+      const pelota = malla(new THREE.SphereGeometry(.28, 12, 10), std('#ff6b2c'), X(xm) - 2.2, 1.2, cz, props);
+      pelota.userData.vivo = true;
+      animados.push((dt, t) => {
+        juego.position.x = Math.sin(t * .9) * 1.4;
+        const u = (t * .7) % 1;
+        if (u < .55) { const k = u / .55; pelota.position.set(X(xm) - 2.2 + juego.position.x + k * (2.2 - juego.position.x), 2.2 + Math.sin(k * Math.PI) * 4.2, cz + (Z(y1 + 8) + 1.9 - cz) * k); }
+        else { const k = (u - .55) / .45; pelota.position.set(X(xm) + (juego.position.x - 2.2) * k, .3 + Math.abs(Math.cos(k * Math.PI * 3)) * 2.4 * (1 - k), Z(y1 + 10) + (cz - Z(y1 + 10)) * k); }
+      });
+    }
+
+    /* --- El Jardín: bancas alrededor de la fuente --- */
+    {
+      const r = E.rotonda, fx = X(r.cx), fz = Z(r.cy);
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2, rr = r.r * .68 * S;
+        const g = new THREE.Group(); g.position.set(fx + Math.cos(a) * rr, 0, fz + Math.sin(a) * rr); g.rotation.y = -a + Math.PI / 2; props.add(g);
+        bloque(2.6, .2, .8, madera, 0, .55, 0, g); bloque(2.6, .6, .15, madera, 0, .95, .38, g);
+        caja(.15, .5, .7, metal, -1.1, .25, 0, g); caja(.15, .5, .7, metal, 1.1, .25, 0, g);
+      }
+    }
+
+    /* --- El Pabellón: papel picado colgando entre los postes --- */
+    {
+      const z = D.zona('pabellon'); const [[x1, y1], , [x2, y2]] = z.forma.puntos;
+      const w = (x2 - x1) * S, h = (y2 - y1) * S, cx = X((x1 + x2) / 2), cz = Z((y1 + y2) / 2);
+      const banderitas = PALETA.map((c) => basico(c, { side: THREE.DoubleSide }));
+      for (let fila = 0; fila < 4; fila++) {
+        const zz = cz - h * .38 + fila * h * .25;
+        for (let i = 0; i < 14; i++) {
+          const t = i / 13, x = cx - w * .44 + t * w * .88, y = 6.1 - Math.sin(t * Math.PI) * .7;
+          const b = new THREE.Mesh(new THREE.PlaneGeometry(.55, .7), banderitas[(i + fila) % 6]); b.position.set(x, y, zz); props.add(b);
+        }
+      }
+    }
+
+    /* --- Las Rampas: más skaters y letrero --- */
+    {
+      const z = D.zona('rampas'); const [cx, cy] = D.centroide(z.forma.puntos);
+      const ext = 14, R = 3.4, P = 1.4;
+      [[1.3, 0, '#1fb36b', '#ff6b2c'], [2.1, 2.4, '#a259ff', '#ffc31f']].forEach(([vel, fase, cuerpo, tabla], i) => {
+        const sk = new THREE.Group(); sk.userData.vivo = true; props.add(sk);
+        bloque(1.5, .12, .45, std(tabla), 0, .12, 0, sk);
+        bloque(.5, 1.1, .4, std(cuerpo), 0, .85, 0, sk);
+        bloque(.45, .7, .35, std('#ffffff'), 0, 1.75, 0, sk);
+        malla(new THREE.SphereGeometry(.28, 12, 10), pielMats[i + 1], 0, 2.3, 0, sk);
+        animados.push((dt, t) => {
+          const u = Math.sin(t * vel + fase);
+          const x = u * (ext - P - .4);
+          const d = Math.max(0, Math.abs(x) - (ext - P - R));
+          const y = d > 0 ? R - Math.sqrt(Math.max(0, R * R - d * d)) : 0;
+          sk.position.set(X(cx) + x, Math.min(R, y) + (Math.abs(u) > .97 ? (Math.abs(u) - .97) * 30 : 0) + (i && Math.abs(x) < 3 ? 1 + Math.sin(t * 6) * .2 : 0), Z(cy) + (i ? 2.6 : 0));
+          sk.rotation.z = d > 0 ? -Math.sign(x) * Math.asin(Math.min(1, d / R)) : 0;
+          sk.rotation.y = Math.cos(t * vel + fase) > 0 ? 0 : Math.PI;
+        });
+      });
+      const poste = new THREE.Group(); poste.position.set(X(cx) + ext + 2, 0, Z(cy) + 6.5); props.add(poste);
+      caja(.3, 5, .3, std(INK), 0, 2.5, 0, poste);
+      [1, -1].forEach((l) => { const s2 = letreroPlano('LAS RAMPAS', 5.4, 1.3, { fondo: '#ffc31f' }, poste); s2.position.set(0, 5.3, l * .05); if (l < 0) s2.rotation.y = Math.PI; });
+    }
+
+    /* --- El Patio: pisos de hule, brincolín, arenero y arco de entrada --- */
+    {
+      const P = (s, d = 0) => [676 + .595 * s - .804 * d, 205 + .804 * s + .595 * d];
+      const rot = -Math.atan2(.804, .595) + Math.PI / 2;
+      const hule = ['#ffd23f', '#7fd8ff', '#b7f28a', '#ffb3d3'].map((c) => std(c, { roughness: 1 }));
+      [[20, 18], [80, 22], [165, 26], [215, 16]].forEach(([s, r], i) => { const [x, y] = P(s); sueloCirculo(x, y, r, hule[i], .09, props); });
+      // brincolín con un niño saltando
+      const [tx, ty] = P(128, 14);
+      const brinco = new THREE.Group(); brinco.position.set(X(tx), 0, Z(ty)); props.add(brinco);
+      const aroB = malla(new THREE.TorusGeometry(2, .25, 8, 32), std('#3d6bff'), 0, .9, 0, brinco); aroB.rotation.x = Math.PI / 2;
+      malla(new THREE.CircleGeometry(1.85, 32).rotateX(-Math.PI / 2), std(INK), 0, .85, 0, brinco, false);
+      for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; caja(.12, .9, .12, metal, Math.cos(a) * 2, .45, Math.sin(a) * 2, brinco); }
+      const nino = persona(brinco, 0, 0, 4, .8); nino.userData.vivo = true;
+      animados.push((dt, t) => { nino.position.y = .85 + Math.abs(Math.sin(t * 3.4)) * 1.6; });
+      circulos.push({ x: tx, y: ty, r: 11 });
+      // arenero con cubetas
+      const [ax, ay] = P(132, -15);
+      const arena = new THREE.Group(); arena.position.set(X(ax), 0, Z(ay)); arena.rotation.y = rot; props.add(arena);
+      bloque(3, .4, 3, maderaClara, 0, .2, 0, arena);
+      circulos.push({ x: ax, y: ay, r: 10 }, { x: P(100)[0], y: P(100)[1], r: 9 });   // arenero y final de la resbaladilla
+      caja(2.6, .1, 2.6, std('#f3d58a', { roughness: 1 }), 0, .38, 0, arena);
+      [[-.6, .5, 0], [.7, -.4, 2], [.2, .8, 4]].forEach(([a, b, c]) => malla(new THREE.CylinderGeometry(.25, .18, .4, 10), colorMat[c], a, .6, b, arena));
+      // arco de entrada con globos, del lado de la rotonda
+      const [gx, gy] = P(240);
+      const arco = new THREE.Group(); arco.position.set(X(gx), 0, Z(gy)); arco.rotation.y = rot; props.add(arco);
+      [-5.4, 5.4].forEach((x, i) => {
+        bloque(.7, 6, .7, colorMat[i ? 2 : 3], x, 3, 0, arco);
+        for (let k = 0; k < 5; k++) malla(new THREE.SphereGeometry(.55, 12, 10), colorMat[(k + i) % 6], x + Math.cos(k * 1.3) * .6, 6.6 + k * .35, Math.sin(k * 1.3) * .6, arco);
+      });
+      bloque(11.5, 1.6, .6, std('#ff5fa2'), 0, 6, 0, arco);
+      [1, -1].forEach((l) => { const s2 = letreroPlano('EL PATIO', 6.5, 1.2, { fondo: '#ffffff' }, arco); s2.position.set(0, 6, l * .32); if (l < 0) s2.rotation.y = Math.PI; });
+    }
+
+    /* --- Foro Abierto: más gradas, público y torres de luces --- */
+    {
+      const foro = new THREE.Group(); foro.position.set(X(756), 0, Z(712)); foro.rotation.y = Math.atan2(-.59, .8); props.add(foro);
+      for (let fila = 2; fila < 4; fila++) bloque(9 + fila, .5, .8, colorMat[(fila + 3) % 6], 0, .25, 5.4 + fila * 1.7, foro);
+      [-7.4, 7.4].forEach((x) => {
+        bloque(.6, 9, .6, std(INK), x, 4.5, 1.5, foro);
+        bloque(1.8, .9, .9, std('#2a2a30'), x, 9.2, 1.5, foro);
+        [-.5, 0, .5].forEach((dx) => malla(new THREE.SphereGeometry(.22, 10, 8), basico('#fff6c9'), x + dx, 9.1, 2, foro, false));
+      });
+      // público frente al escenario, en dos grupos que brincan a destiempo
+      [0, 1].forEach((k) => {
+        const g = new THREE.Group(); g.userData.vivo = true; foro.add(g);
+        for (let i = 0; i < 9; i++) persona(g, -6 + i * 1.5 + k * .75, 12.4 + k * 1.6 + ((i * 7) % 3) * .3, i + k * 3, 1.15);
+        animados.push((dt, t) => { g.position.y = Math.max(0, Math.sin(t * 5 + k * Math.PI)) * .35; });
+      });
+      foro.updateMatrixWorld(true);
+      // las bancas también estorban al caminar (y la estación de juego no cae encima)
+      for (let fila = 0; fila < 4; fila++) for (let x = -5; x <= 5; x += 2.5) {
+        const b = foro.localToWorld(new THREE.Vector3(x, 0, 5.4 + fila * 1.7));
+        const [bx, by] = aPlano(b.x, b.z); circulos.push({ x: bx, y: by, r: 5 });
+      }
+      const v = foro.localToWorld(new THREE.Vector3(0, 0, 13.2));
+      const [px, py] = aPlano(v.x, v.z);
+      circulos.push({ x: px, y: py, r: 22 });
+    }
   }
 
   /* ----- Mercado (terraza del Nivel 2): solo en el mapa isométrico ----- */
@@ -778,13 +869,32 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
     bordes(terraza.geometry, niveles[2], terraza.position);
     const [[x1, y1], , [x2, y2]] = z.forma.puntos;
     const tTienda = lienzo(256, 32, (ctx, W, H) => { for (let i = 0; i < 16; i++) { ctx.fillStyle = i % 2 ? '#ffffff' : '#ff9f1c'; ctx.fillRect(i * 16, 0, 16, H); } });
-    [[.25, .3], [.5, .7], [.75, .3]].forEach(([a, b]) => {
+    [[.18, .28], [.42, .28], [.66, .28], [.18, .72], [.42, .72], [.66, .72]].forEach(([a, b], i) => {
       const x = x1 + (x2 - x1) * a, y = y1 + (y2 - y1) * b;
       const g = new THREE.Group(); g.position.set(X(x), 2 * ALTO_NIVEL + .2, Z(y)); niveles[2].add(g);
       [[-1.8, -1.8], [1.8, -1.8], [-1.8, 1.8], [1.8, 1.8]].forEach(([p, q]) => caja(.14, 2.8, .14, metal, p, 1.4, q, g));
       const carpa = malla(new THREE.ConeGeometry(3.2, 1.6, 4), std('#ffffff', { map: tTienda }), 0, 3.6, 0, g); carpa.rotation.y = Math.PI / 4;
       bloque(2.4, .9, 1.2, std('#c9864a'), 0, .45, 0, g);
     });
+    // mesas con sombrilla, gente y series de luces sobre el pasillo central
+    const yM = 2 * ALTO_NIVEL + .2;
+    [[.88, .3], [.88, .55], [.88, .8], [.3, .5], [.54, .5]].forEach(([a, b], i) => {
+      const g = new THREE.Group(); g.position.set(X(x1 + (x2 - x1) * a), yM, Z(y1 + (y2 - y1) * b)); niveles[2].add(g);
+      malla(new THREE.CylinderGeometry(.9, .9, .1, 16), blanco, 0, .8, 0, g);
+      caja(.1, 2.6, .1, metal, 0, 1.3, 0, g);
+      malla(new THREE.ConeGeometry(2, .6, 8), colorMat[i % 6], 0, 2.7, 0, g);
+      [0, 2].forEach((k) => persona(g, Math.cos(k + i) * 1.3, Math.sin(k + i) * 1.3, i + k, 1.1));
+    });
+    const cableM = [];
+    for (let k = 0; k < 4; k++) {
+      const xa = x1 + (x2 - x1) * (.08 + k * .25), xb = xa + (x2 - x1) * .2;
+      for (let q = 0; q < 10; q++) {
+        const t0 = q / 10, t1 = (q + 1) / 10, yy = y1 + (y2 - y1) * .5;
+        cableM.push(new THREE.Vector3(X(xa + (xb - xa) * t0), yM + 4 - Math.sin(t0 * Math.PI) * .6, Z(yy)), new THREE.Vector3(X(xa + (xb - xa) * t1), yM + 4 - Math.sin(t1 * Math.PI) * .6, Z(yy)));
+        malla(new THREE.SphereGeometry(.16, 8, 6), basico(PALETA[q % 6]), X(xa + (xb - xa) * t0), yM + 3.85 - Math.sin(t0 * Math.PI) * .6, Z(yy), niveles[2], false);
+      }
+    }
+    niveles[2].add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(cableM), new THREE.LineBasicMaterial({ color: '#3a3530' })));
     const letrero = letreroPlano('MERCADO LA PERLA', 12, 1.8, { fondo: '#ff9f1c' }, niveles[2]);
     letrero.position.set(X((x1 + x2) / 2), 2 * ALTO_NIVEL + 2, Z(y2) + .2);
   }
@@ -843,6 +953,21 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
   }
 
   // ---------- Zonas: áreas táctiles y estaciones de juego ----------
+  // la estación va en el punto libre más cercano al centro de la experiencia
+  function sitioJuego(z) {
+    if (!z.forma || z.nivel !== 0) return z.acceso;
+    const circ = z.forma.tipo === 'circ';
+    const [cx, cy] = circ ? [z.forma.cx, z.forma.cy] : D.centroide(z.forma.puntos);
+    const dentro = (x, y) => (circ ? Math.hypot(x - cx, y - cy) < z.forma.r - 6 : D.enPoligono(z.forma.puntos, x, y));
+    for (let r = 0; r < 90; r += 4) {
+      const n = r ? Math.ceil((2 * Math.PI * r) / 6) : 1;
+      for (let k = 0; k < n; k++) {
+        const a = (k / n) * Math.PI * 2 + Math.PI / 2, x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+        if (dentro(x, y) && !choca(x, y, 9)) return [x, y];
+      }
+    }
+    return z.acceso;
+  }
   const zonaMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
   D.zonas.forEach((z) => {
     let m = null;
@@ -856,8 +981,9 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
     }
     if (m) { m.userData = { zona: z, nivel: z.nivel }; m.renderOrder = -1; niveles[z.nivel].add(m); pickables.push(m); }
     if (fps) {
+      const [sx, sy] = sitioJuego(z);
       const g = new THREE.Group();
-      g.position.set(X(z.acceso[0]), 0, Z(z.acceso[1]));
+      g.position.set(X(sx), 0, Z(sy));
       const tex = lienzo(256, 384, (ctx, W, H) => {
         ctx.fillStyle = '#141414'; ctx.fillRect(0, 0, W, H);
         ctx.fillStyle = z.acento; ctx.fillRect(10, 10, W - 20, 220);
@@ -875,14 +1001,12 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
       aro.position.y = .1; g.add(aro);
       scene.add(g);
       animados.push((dt, t) => { panel.rotation.y = t * .8; aro.scale.setScalar(1 + Math.sin(t * 3) * .08); });
-      estaciones.push({ zona: z, grupo: g, x: z.acceso[0], y: z.acceso[1] });
+      estaciones.push({ zona: z, grupo: g, x: sx, y: sy });
     }
   });
 
   /* ---------- Losas de Nivel 1 y 2 con barandales de vidrio alrededor de los vacíos ---------- */
   {
-    const exterior = LOSA_EXT, suroeste = LOSA_SO;
-    const huecos = [E.calzada, E.plazaNorte, E.plazaSur, E.diagonalNE, E.diagonalSE];
     const texL = baldosa('#efeae0', '#ddd6c8', 4); texL.repeat.set(.25, .25);
     const matL = std('#ffffff', { map: texL, roughness: .9 });
     const vidrioB = new THREE.MeshStandardMaterial({ color: '#bfe6ff', transparent: true, opacity: .35, roughness: .1, metalness: .1, depthWrite: false });
@@ -897,24 +1021,24 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
       for (let i = 0; i <= n; i++) caja(.09, 1.15, .09, barra, -len / 2 + (i * len) / n, .58, 0, g);
     };
     const r = E.rotonda;
+    const cercaRotonda = (x, y) => Math.abs(Math.hypot(x - r.cx, y - r.cy) - r.r) < 6;
     [1, 2].forEach((n) => {
-      const y = n * ALTO_NIVEL + .18;
-      const sh = forma(exterior);
-      huecos.forEach((h) => sh.holes.push(new THREE.Path(h.map(([x, yy]) => new THREE.Vector2(X(x), -Z(yy))))));
-      const hc = new THREE.Path(); hc.absarc(X(r.cx), -Z(r.cy), r.r * S, 0, Math.PI * 2, true); sh.holes.push(hc);
-      [sh, forma(suroeste)].forEach((fz) => {
-        const geo = new THREE.ExtrudeGeometry(fz, { depth: .35, bevelEnabled: false, curveSegments: 24 });
+      const y = n * ALTO_NIVEL + .18, est = estructuras[n];
+      // piso: solo pasillos públicos y lo construido; donde no hay nada se ve la azotea del nivel de abajo
+      est.losas.forEach(({ contorno, huecos }) => {
+        const sh = forma(contorno);
+        huecos.forEach((h) => sh.holes.push(new THREE.Path(h.map(([x, yy]) => new THREE.Vector2(X(x), -Z(yy))))));
+        const geo = new THREE.ExtrudeGeometry(sh, { depth: .35, bevelEnabled: false });
         geo.rotateX(-Math.PI / 2);
         const m = new THREE.Mesh(geo, matL); m.position.y = y - .35; m.castShadow = true; m.receiveShadow = true;
         niveles[n].add(m);
         bordes(geo, niveles[n], m.position, .9);
       });
-      const tramos = [];
-      const poli = (pts, cerrar) => { for (let i = 0; i < pts.length - (cerrar ? 0 : 1); i++) tramos.push([pts[i], pts[(i + 1) % pts.length]]); };
-      huecos.forEach((h) => poli(h, true));
-      poli(exterior.slice(3), false);
-      poli([[8, 866], [124, 866], [124, 1052]], false);
-      tramos.forEach(([[ax, ay], [bx, by]]) => barandal(X(ax), Z(ay), X(bx), Z(by), y, niveles[n]));
+      // barandal donde el pasillo da a un vacío o a una azotea (la rotonda lleva su aro redondo)
+      est.barandales.forEach(([ax, ay, bx, by]) => {
+        if (cercaRotonda(ax, ay) && cercaRotonda(bx, by)) return;
+        barandal(X(ax), Z(ay), X(bx), Z(by), y, niveles[n]);
+      });
       const cx = X(r.cx), cz = Z(r.cy), rr = r.r * S;
       const aro = malla(new THREE.TorusGeometry(rr, .07, 6, 72), barra, cx, y + 1.1, cz, niveles[n]); aro.rotation.x = Math.PI / 2;
       malla(new THREE.CylinderGeometry(rr, rr, .9, 72, 1, true), vidrioB, cx, y + .6, cz, niveles[n], false);
@@ -924,10 +1048,10 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
 
   /* ---------- Atlas de letreros: todos los nombres de tienda en pocas texturas ---------- */
   if (letrerosAtlas.length) {
-    const AT = 2048, ALTO = 72;
+    const AT = 2048, ALTO = movil ? 56 : 72;
     const paginas = [];
     let ctx = null, x = 0, y = 0;
-    const nueva = () => { const c = document.createElement('canvas'); c.width = c.height = AT; ctx = c.getContext('2d'); x = 0; y = 0; paginas.push({ c, geos: [] }); };
+    const nueva = () => { const c = document.createElement('canvas'); c.width = c.height = AT; ctx = c.getContext('2d'); x = 0; y = 0; paginas.push({ c, geos: [[], [], []] }); };
     nueva();
     letrerosAtlas.forEach((l) => {
       const pw = Math.min(AT, Math.round((ALTO * l.w) / l.h));
@@ -945,13 +1069,17 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
       for (let i = 0; i < uv.count; i++) uv.setXY(i, (x + uv.getX(i) * pw) / AT, 1 - (y + (1 - uv.getY(i)) * ALTO) / AT);
       l.grupo.updateMatrixWorld(true);
       g.applyMatrix4(new THREE.Matrix4().makeTranslation(l.pos[0], l.pos[1], l.pos[2]).premultiply(l.grupo.matrixWorld));
-      paginas[paginas.length - 1].geos.push(g);
+      paginas[paginas.length - 1].geos[l.nivel].push(g);
       x += pw + 4;
     });
     paginas.forEach((p) => {
       const t = new THREE.CanvasTexture(p.c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
-      const m = new THREE.Mesh(mergeGeometries(p.geos), basico('#ffffff', { map: t }));
-      m.userData.noFusionar = true; niveles[0].add(m);
+      const mat = basico('#ffffff', { map: t });
+      p.geos.forEach((geos, n) => {
+        if (!geos.length) return;
+        const m = new THREE.Mesh(mergeGeometries(geos), mat);
+        m.userData.noFusionar = true; niveles[n].add(m);
+      });
     });
   }
 
@@ -1056,5 +1184,5 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
   function actualizar(dt, t) { animados.forEach((f) => f(dt, t)); }
 
   const fachadas = [...Object.values(cacheFascia), ...Object.values(cacheMat).map((m) => m[1])];
-  return { scene, raiz, niveles, pickables, tiendasMallas, fachadas, estaciones, hemi, sol, focoMat, vidrio, mostrarNivel, choca, actualizar };
+  return { scene, raiz, niveles, pickables, tiendasMallas, fachadas, frentes, estaciones, hemi, sol, focoMat, vidrio, mostrarNivel, choca, actualizar };
 }

@@ -485,14 +485,17 @@ function listaZonas() {
 }
 $('listaZonas').addEventListener('click', (e) => { const b = e.target.closest('[data-i]'); if (b) viajar(plaza.estaciones[+b.dataset.i]); });
 function viajar(est) {
-  // aparece detrás del tótem, mirando hacia la experiencia (el tótem queda a un lado)
-  const [cx, cy] = est.zona.vista || est.zona.pin;
-  const base = Math.atan2(est.y - cy, est.x - cx);
-  for (const da of [.45, -.45, .8, -.8, 0, 1.2, -1.2, Math.PI]) {
-    const x = est.x + Math.cos(base + da) * 26, y = est.y + Math.sin(base + da) * 26;
-    if (!plaza.choca(x, y, CFG.radioPx)) { P.x = x; P.y = y; break; }
+  // aparece a unos pasos del tótem (que está al centro de la experiencia), mirándolo
+  const base = Math.atan2(P.y - est.y, P.x - est.x);
+  let listo = false;
+  for (const dist of [30, 22, 40]) {
+    for (const da of [0, .5, -.5, 1, -1, 1.6, -1.6, 2.2, -2.2, Math.PI]) {
+      const x = est.x + Math.cos(base + da) * dist, y = est.y + Math.sin(base + da) * dist;
+      if (!plaza.choca(x, y, CFG.radioPx)) { P.x = x; P.y = y; listo = true; break; }
+    }
+    if (listo) break;
   }
-  P.yaw = Math.atan2(-(cx - P.x), -(cy - P.y)); P.pitch = .04; P.vx = P.vy = 0;
+  P.yaw = Math.atan2(-(est.x - P.x), -(est.y - P.y)); P.pitch = .04; P.vx = P.vy = 0;
   cerrarOverlays();
   aviso(`Viaje rápido · ${est.zona.nombre}`);
 }

@@ -361,7 +361,7 @@
     },
     {
       id: 'mercado', nombre: 'Mercado La Perla', categoria: 'Comida', icono: 'food', acento: '#ff9f1c', nivel: 2,
-      forma: { tipo: 'poly', puntos: n2([[1440, 690], [1900, 690], [1900, 1010], [1440, 1010]]) }, pin: n2Pt([1670, 850]), acceso: n2Pt([1600, 850]),
+      forma: { tipo: 'poly', puntos: n2([[1580, 690], [1900, 690], [1900, 1010], [1580, 1010]]) }, pin: n2Pt([1740, 850]), acceso: n2Pt([1640, 850]),
       juego: 'horapico', m2: null, horario: null,
       desc: 'La terraza gastronómica de La Perla en el Nivel 2: delicias que no te puedes perder, todas en un mismo lugar.',
       datos: ['Terraza gastronómica', 'Nivel 2'],
