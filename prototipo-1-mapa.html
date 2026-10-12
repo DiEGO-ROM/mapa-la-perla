@@ -336,7 +336,7 @@ function construirEtiquetas() {
     el.innerHTML = `<span class="ico">${icono(z.icono)}</span><span class="nom">${z.nombre}</span>${e ? `<span class="estr">${'★'.repeat(e)}</span>` : ''}`;
     el.addEventListener('click', (ev) => { ev.stopPropagation(); seleccionarZona(z); });
     capa.appendChild(el);
-    const h = z.id === 'liverpool' ? nivel * MUNDO.ALTO_NIVEL + MUNDO.ALTO_LOCAL + 3 : z.nivel * MUNDO.ALTO_NIVEL + (z.tienda ? MUNDO.ALTO_LOCAL + 3 : 7);
+    const h = z.id === 'liverpool' ? nivel * MUNDO.ALTO_NIVEL + MUNDO.ALTO_LOCAL + 3 : z.nivel * MUNDO.ALTO_NIVEL + (z.tienda ? MUNDO.ALTO_LOCAL + 3 : 13);
     etiquetas.push({ el, pos: new THREE.Vector3(X(z.pin[0]), h, Z(z.pin[1])), zona: z, prioridad: 1, ancho: 90 });
   });
   camCambio = true;

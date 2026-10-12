@@ -340,14 +340,14 @@
     },
     {
       id: 'canino', nombre: 'Club Canino', categoria: 'Pet friendly', icono: 'paw', acento: '#7ccf3f', nivel: 0,
-      forma: { tipo: 'circ', cx: pbPt([180, 262])[0], cy: pbPt([180, 262])[1], r: 28 }, pin: pbPt([180, 262]), acceso: pbPt([225, 262]),
+      forma: { tipo: 'circ', cx: pbPt([180, 262])[0], cy: pbPt([180, 262])[1], r: 36 }, pin: pbPt([180, 262]), acceso: pbPt([225, 262]),
       juego: 'agilidad', m2: '218 m²', horario: 'Todos los días · 10:00 – 20:30',
       desc: 'Espacio para perros grandes y chicos, con mobiliario para jugar y ejercitarse. Parte del programa Manada Segura®.',
       datos: ['Correa y collar', 'Estaciones de limpieza', 'Manada Segura®'],
     },
     {
       id: 'patio', nombre: 'El Patio', categoria: 'Niñas y niños', icono: 'kids', acento: '#ff5fa2', nivel: 0,
-      forma: { tipo: 'poly', puntos: ESPACIOS.diagonalNE }, pin: [745, 290], acceso: [760, 330],
+      forma: { tipo: 'poly', puntos: ESPACIOS.diagonalNE }, pin: [745, 290], acceso: [735, 300], vista: [774, 338],
       juego: 'columpio', m2: '479 m²', horario: 'Todos los días · 11:00 – 21:00',
       desc: 'Área de juegos para peques, con piso acolchado para jugar con seguridad. En su nivel 1 está el Foro Urbano.',
       datos: ['De 5 a 11 años', 'Estatura máx. 1.50 m', 'Siempre con un adulto'],

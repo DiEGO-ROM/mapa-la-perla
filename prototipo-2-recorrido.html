@@ -267,33 +267,6 @@ const cieloMat = new THREE.ShaderMaterial({
 const cielo = new THREE.Mesh(new THREE.SphereGeometry(800, 32, 16), cieloMat);
 scene.add(cielo);
 
-// Letreros de tiendas (planta baja) y pines de experiencias
-function lienzo(w, h, dibujar) {
-  const c = document.createElement('canvas'); c.width = w; c.height = h;
-  dibujar(c.getContext('2d'), w, h);
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
-}
-const letreros = [];
-D.NIVELES[0].tiendas.forEach((t) => {
-  if (!t.nombre) return;
-  const color = D.CATEGORIAS[t.cat].color;
-  const tex = lienzo(512, 96, (ctx, W, H) => {
-    ctx.font = '800 44px Montserrat, sans-serif';
-    const w = Math.min(W - 8, ctx.measureText(t.nombre).width + 70);
-    const x0 = (W - w) / 2;
-    ctx.fillStyle = '#141414'; ctx.fillRect(x0 + 6, 10, w, 80);
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(x0, 4, w, 80);
-    ctx.lineWidth = 5; ctx.strokeStyle = '#141414'; ctx.strokeRect(x0, 4, w, 80);
-    ctx.fillStyle = color; ctx.fillRect(x0 + 14, 30, 26, 26); ctx.strokeRect(x0 + 14, 30, 26, 26);
-    ctx.fillStyle = '#141414'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(t.nombre, x0 + 52, 46, w - 62);
-  });
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false }));
-  sp.position.set(X(t.centro[0]), MUNDO.ALTO_LOCAL + 1.6, Z(t.centro[1]));
-  sp.scale.set(6.4, 1.2, 1);
-  scene.add(sp);
-  letreros.push(sp);
-});
-
 /* ======================= Estado y controles ======================= */
 const P = { x: 196, y: 1052, yaw: 0, pitch: -0.03, vx: 0, vy: 0, paso: 0 };
 const estado = { iniciado: false, jugando: false, dist: 0, tiempo: 0, noche: 0, nocheObj: 0, completo: false };
@@ -357,6 +330,7 @@ function aplicarHora(n) {
   plaza.sol.intensity = lerp(DIA.sol, NOCHE.sol, n);
   renderer.toneMappingExposure = lerp(DIA.exp, NOCHE.exp, n);
   matsFachada.forEach((m) => { m.emissive.copy(m.color); m.emissiveIntensity = n * .45; });
+  plaza.vidrio.emissiveIntensity = lerp(.05, 1.6, n);
   if (plaza.focoMat) plaza.focoMat.color.set(n > .5 ? '#fff4c9' : '#ffe29a');
 }
 aplicarHora(0);
@@ -497,13 +471,14 @@ function listaZonas() {
 }
 $('listaZonas').addEventListener('click', (e) => { const b = e.target.closest('[data-i]'); if (b) viajar(plaza.estaciones[+b.dataset.i]); });
 function viajar(est) {
-  // aparece a unos pasos del tótem, mirándolo
-  const angulos = [Math.PI / 2, 0, Math.PI, -Math.PI / 2, Math.PI / 4, -Math.PI / 4, 3 * Math.PI / 4, -3 * Math.PI / 4];
-  for (const a of angulos) {
-    const x = est.x + Math.cos(a) * 24, y = est.y + Math.sin(a) * 24;
+  // aparece detrás del tótem, mirando hacia la experiencia (el tótem queda a un lado)
+  const [cx, cy] = est.zona.vista || est.zona.pin;
+  const base = Math.atan2(est.y - cy, est.x - cx);
+  for (const da of [.45, -.45, .8, -.8, 0, 1.2, -1.2, Math.PI]) {
+    const x = est.x + Math.cos(base + da) * 26, y = est.y + Math.sin(base + da) * 26;
     if (!plaza.choca(x, y, CFG.radioPx)) { P.x = x; P.y = y; break; }
   }
-  P.yaw = Math.atan2(-(est.x - P.x), -(est.y - P.y)); P.pitch = -0.08; P.vx = P.vy = 0;
+  P.yaw = Math.atan2(-(cx - P.x), -(cy - P.y)); P.pitch = .04; P.vx = P.vy = 0;
   cerrarOverlays();
   aviso(`Viaje rápido · ${est.zona.nombre}`);
 }
@@ -574,8 +549,6 @@ function cuadro() {
   camera.rotation.set(P.pitch, P.yaw, 0);
   cielo.position.copy(camera.position);
   plaza.actualizar(dt, t);
-  // letreros: se ocultan lejos para no saturar
-  letreros.forEach((sp) => { const d = sp.position.distanceTo(camera.position); sp.material.opacity = Math.max(0, Math.min(1, (70 - d) / 20)); sp.visible = d < 70; });
 
   hudT -= dt;
   if (hudT <= 0 && estado.iniciado) {
