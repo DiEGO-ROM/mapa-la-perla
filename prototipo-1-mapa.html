@@ -26,7 +26,7 @@
     position: fixed; top: 0; left: 0; right: 0; z-index: 5; background: #fff; border-bottom: var(--borde);
     display: grid; grid-template-columns: auto 1fr auto; align-items: stretch; padding-top: env(safe-area-inset-top);
   }
-  .marca { background: var(--ink); color: #fff; padding: 10px 16px; display: flex; flex-direction: column; justify-content: center; }
+  .marca { background: var(--ink); color: #fff; text-decoration: none; padding: 10px 16px; display: flex; flex-direction: column; justify-content: center; }
   .marca b { font-weight: 900; letter-spacing: .22em; font-size: 16px; line-height: 1; }
   .marca b sup { font-size: 8px; letter-spacing: 0; }
   .marca small { font-size: 10px; font-weight: 600; opacity: .75; margin-top: 4px; }
@@ -40,11 +40,13 @@
   .niveles button[aria-selected="true"] { background: var(--c); color: var(--t, var(--ink)); }
   .niveles button[aria-selected="true"] i { background: #fff; }
   .acciones { display: flex; border-left: var(--borde); }
-  .acciones button { border: 0; border-left: var(--borde); background: #fff; padding: 0 16px; font-weight: 900; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; display: flex; align-items: center; gap: 8px; min-height: 52px; }
-  .acciones button:first-child { border-left: 0; }
-  .acciones button svg { width: 18px; height: 18px; flex: none; }
+  .acciones a { text-decoration: none; color: inherit; }
+  .acciones button, .acciones a { border: 0; border-left: var(--borde); background: #fff; padding: 0 16px; font-weight: 900; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; display: flex; align-items: center; gap: 8px; min-height: 52px; }
+  .acciones > :first-child { border-left: 0; }
+  .acciones svg { width: 18px; height: 18px; flex: none; }
   .acciones button[aria-pressed="true"] { background: var(--azul); color: #fff; }
   #btnPasaporte { background: var(--amarillo); }
+  #btnOtro { background: var(--verde); color: #fff; }
 
   /* ---------- Etiquetas sobre el mapa ---------- */
   #etiquetas { position: fixed; inset: 0; pointer-events: none; z-index: 2; overflow: hidden; }
@@ -163,7 +165,7 @@
     .niveles { grid-column: 1 / -1; grid-row: 2; border-top: var(--borde); padding: 0; }
     .niveles button { flex: 1; justify-content: center; border-top: 0; border-bottom: 0; padding: 10px 6px; font-size: 12px; }
     .niveles button:first-child { border-left: 0; } .niveles button:last-child { border-right: 0; }
-    .acciones button { padding: 0 12px; min-height: 46px; }
+    .acciones button, .acciones a { padding: 0 12px; min-height: 46px; }
     .acciones .txt { display: none; }
     .hoja { left: 10px; right: 10px; width: auto; bottom: calc(10px + env(safe-area-inset-bottom)); }
     .zoom { right: 10px; bottom: calc(12px + env(safe-area-inset-bottom)); }
@@ -178,13 +180,14 @@
 <div id="etiquetas"></div>
 
 <header class="barra">
-  <div class="marca"><b>LA PERLA<sup>®</sup></b><small>Mapa interactivo · Prototipo 1</small></div>
+  <a class="marca" href="./" aria-label="Volver a los prototipos"><b>LA PERLA<sup>®</sup></b><small>Mapa interactivo · Prototipo 1</small></a>
   <nav class="niveles" role="tablist" aria-label="Nivel">
     <button role="tab" data-nivel="0" aria-selected="true" style="--c:var(--naranja)"><i></i>Planta baja</button>
     <button role="tab" data-nivel="1" aria-selected="false" style="--c:var(--verde);--t:#fff"><i></i>Nivel 1</button>
     <button role="tab" data-nivel="2" aria-selected="false" style="--c:var(--morado);--t:#fff"><i></i>Nivel 2</button>
   </nav>
   <div class="acciones">
+    <a id="btnOtro" href="prototipo-2-recorrido.html" aria-label="Abrir el recorrido en primera persona"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4.5" r="2"/><path d="M10 21l2-6 3 3v3M8.5 11.5L11 8l3 1 2 3 2.5 1M11 8l-1 5 2 2"/></svg><span class="txt">Recorrido 3D</span></a>
     <button id="btnBuscar" aria-label="Buscar tienda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg><span class="txt">Directorio</span></button>
     <button id="btnReto" aria-pressed="false" aria-label="Jugar ¿Dónde está?"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><path d="M10 8.5a2 2 0 1 1 2.8 1.8c-.6.3-.8.8-.8 1.4M12 14.2v.3"/></svg><span class="txt">¿Dónde está?</span></button>
     <button id="btnPasaporte" aria-label="Pasaporte de estrellas"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6-4.5-4.2 6.1-.7z"/></svg><span id="cuentaEstrellas">0/33</span></button>

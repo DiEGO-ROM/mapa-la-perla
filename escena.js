@@ -110,6 +110,107 @@ function distSeg(px, py, ax, ay, bx, by) {
   return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
 }
 
+/* ---------------- estructura continua de cada nivel ----------------
+   En el plano los locales están separados por una franja blanca que en la plaza real es muro.
+   Se rasteriza cada nivel a 1 px, se hace un cierre morfológico (dilatar y erosionar) que tapa
+   las franjas angostas entre locales sin crecer las fachadas, y los rellenos se devuelven como
+   polígonos. macizo(x, y) dice si un punto del plano está construido. */
+function dilatar(src, w, h, r) {
+  const tmp = new Uint8Array(w * h), out = new Uint8Array(w * h);
+  const acc = new Int32Array(Math.max(w, h) + 1);
+  for (let j = 0; j < h; j++) {
+    const o = j * w;
+    for (let i = 0; i < w; i++) acc[i + 1] = acc[i] + src[o + i];
+    for (let i = 0; i < w; i++) tmp[o + i] = acc[Math.min(w, i + r + 1)] - acc[Math.max(0, i - r)] > 0 ? 1 : 0;
+  }
+  for (let i = 0; i < w; i++) {
+    for (let j = 0; j < h; j++) acc[j + 1] = acc[j] + tmp[j * w + i];
+    for (let j = 0; j < h; j++) out[j * w + i] = acc[Math.min(h, j + r + 1)] - acc[Math.max(0, j - r)] > 0 ? 1 : 0;
+  }
+  return out;
+}
+const invertir = (a) => { for (let i = 0; i < a.length; i++) a[i] = 1 - a[i]; return a; };
+function simplificar(pts, tol) {
+  if (pts.length < 3) return pts;
+  const [ax, ay] = pts[0], [bx, by] = pts[pts.length - 1];
+  let max = 0, k = 0;
+  for (let i = 1; i < pts.length - 1; i++) { const d = distSeg(pts[i][0], pts[i][1], ax, ay, bx, by); if (d > max) { max = d; k = i; } }
+  if (max <= tol) return [pts[0], pts[pts.length - 1]];
+  return simplificar(pts.slice(0, k + 1), tol).slice(0, -1).concat(simplificar(pts.slice(k), tol));
+}
+// contornos exteriores de una máscara (interior a la izquierda); los huecos se ignoran
+function contornos(M, w, h, areaMin) {
+  const W1 = w + 1, sig = new Map();
+  const arista = (ax, ay, bx, by) => { const k = ay * W1 + ax, l = sig.get(k); if (l) l.push(by * W1 + bx); else sig.set(k, [by * W1 + bx]); };
+  const en = (i, j) => i >= 0 && j >= 0 && i < w && j < h && M[j * w + i] === 1;
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+    if (!M[j * w + i]) continue;
+    if (!en(i, j - 1)) arista(i + 1, j, i, j);
+    if (!en(i, j + 1)) arista(i, j + 1, i + 1, j + 1);
+    if (!en(i - 1, j)) arista(i, j, i, j + 1);
+    if (!en(i + 1, j)) arista(i + 1, j + 1, i + 1, j);
+  }
+  const lazos = [];
+  for (const [inicio] of sig) {
+    while (sig.get(inicio) && sig.get(inicio).length) {
+      const pts = []; let v = inicio, dx = 0, dy = 0;
+      do {
+        const l = sig.get(v);
+        const x = v % W1, y = (v - x) / W1;
+        let idx = 0;
+        if (l.length > 1) { const k = l.findIndex((u) => (u % W1) - x === dy && ((u - (u % W1)) / W1) - y === -dx); if (k >= 0) idx = k; }
+        const u = l.splice(idx, 1)[0];
+        const ux = u % W1, uy = (u - ux) / W1;
+        if (ux - x !== dx || uy - y !== dy) pts.push([x, y]);
+        dx = ux - x; dy = uy - y; v = u;
+      } while (v !== inicio && sig.get(v) && sig.get(v).length);
+      let a = 0;
+      for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) a += pts[j][0] * pts[i][1] - pts[i][0] * pts[j][1];
+      if (a / 2 < -areaMin) lazos.push(pts);
+    }
+  }
+  return lazos;
+}
+function estructuraNivel(polys, radio = 8) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  polys.forEach((p) => p.forEach(([x, y]) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }));
+  const m = radio + 4;
+  x0 = Math.floor(x0) - m; y0 = Math.floor(y0) - m;
+  const w = Math.ceil(x1) - x0 + m, h = Math.ceil(y1) - y0 + m;
+  const base = new Uint8Array(w * h);
+  polys.forEach((p) => {
+    let ya = Infinity, yb = -Infinity;
+    p.forEach(([, y]) => { ya = Math.min(ya, y); yb = Math.max(yb, y); });
+    for (let j = Math.max(0, Math.floor(ya - y0)); j < Math.min(h, Math.ceil(yb - y0) + 1); j++) {
+      const yc = y0 + j + .5, xs = [];
+      for (let i = 0, k = p.length - 1; i < p.length; k = i++) {
+        const [ax, ay] = p[k], [bx, by] = p[i];
+        if ((ay > yc) !== (by > yc)) xs.push(ax + ((yc - ay) * (bx - ax)) / (by - ay));
+      }
+      xs.sort((a, b) => a - b);
+      for (let q = 0; q + 1 < xs.length; q += 2) {
+        const ia = Math.max(0, Math.ceil(xs[q] - x0 - .5)), ib = Math.min(w - 1, Math.floor(xs[q + 1] - x0 - .5));
+        for (let i = ia; i <= ib; i++) base[j * w + i] = 1;
+      }
+    }
+  });
+  const cierre = invertir(dilatar(invertir(dilatar(base, w, h, radio)), w, h, radio));
+  const relleno = new Uint8Array(w * h);
+  for (let i = 0; i < relleno.length; i++) relleno[i] = cierre[i] && !base[i] ? 1 : 0;
+  // el relleno se mete 1 px en cada local para que no queden rendijas
+  const grueso = dilatar(relleno, w, h, 1);
+  for (let i = 0; i < grueso.length; i++) grueso[i] &= cierre[i];
+  const rellenos = contornos(grueso, w, h, 30).map((pts) => {
+    const s = simplificar([...pts, pts[0]], .9).slice(0, -1);
+    return s.map(([x, y]) => [x0 + x, y0 + y]);
+  }).filter((p) => p.length >= 3);
+  const macizo = (x, y) => {
+    const i = Math.floor(x - x0), j = Math.floor(y - y0);
+    return i >= 0 && j >= 0 && i < w && j < h && cierre[j * w + i] === 1;
+  };
+  return { rellenos, macizo };
+}
+
 /* ======================================================================= */
 export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
   const scene = new THREE.Scene();
@@ -177,48 +278,70 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
   const texForo = baldosa('#ead9ff', '#d6bcff', 3); texForo.repeat.set(.25, .25);
   sueloPoligono(E.diagonalSE, std('#ffffff', { map: texForo }), .05, suelo);
 
-  // ---------- Edificios por nivel ----------
+  // ---------- Edificios por nivel: una estructura continua con el techo de cada local en su color ----------
   const niveles = [0, 1, 2].map(() => { const g = new THREE.Group(); raiz.add(g); return g; });
   const gris = [std('#e9e9e4'), std('#c9c9c3')];
-  const cacheMat = {};
+  const LOSA_EXT = [[8, 4], [1186, 4], [1186, 1052], [268, 1052], [268, 866], [415, 866], [415, 787], [249, 787], [249, 730], [125, 730], [125, 787], [8, 787]];
+  const LOSA_SO = [[8, 866], [124, 866], [124, 1052], [8, 1052]];
+  const ALTO_MURO = ALTO_LOCAL - .3;
+  const baseNivel = (n) => n * ALTO_NIVEL + (n ? .18 : 0);
+  const altoTapa = (t) => (t.cat === 'ancla' ? .8 : t.cat === 'local' ? .22 : .4);
+  const muroMats = [std('#e6e0d4', { roughness: .9 }), std('#fbf8f2', { roughness: .85 })];   // [azotea, muros]
+  const pilastra = std('#ddd5c6', { roughness: .85 });
+  const cacheMat = {}, cacheFascia = {};
+  const colorDe = (t) => (t.cat === 'local' ? '#cfc7b8' : COLOR_TIENDA[t.nombre] || D.CATEGORIAS[t.cat].color);
   function materialesDe(t) {
-    const color = COLOR_TIENDA[t.nombre] || D.CATEGORIAS[t.cat].color;
+    const color = colorDe(t);
     if (!cacheMat[color]) {
       const lateral = new THREE.Color(color);
       if (t.cat !== 'ancla') lateral.lerp(new THREE.Color('#ffffff'), t.cat === 'local' ? 0 : .12);
-      const techo = new THREE.Color(color).lerp(new THREE.Color('#ffffff'), t.cat === 'local' ? .5 : t.cat === 'ancla' ? .4 : .4);
+      const techo = new THREE.Color(color).lerp(new THREE.Color('#ffffff'), t.cat === 'local' ? .3 : .4);
       cacheMat[color] = [std(techo, { roughness: .7 }), std(lateral, { roughness: .6 })];
     }
     return cacheMat[color];
   }
-  const tiendasMallas = [];
+  const fasciaDe = (color) => (cacheFascia[color] = cacheFascia[color] || std(color, { roughness: .55 }));
+  const extruir = (poly, alto) => new THREE.ExtrudeGeometry(forma(poly), { depth: alto, bevelEnabled: false }).rotateX(-Math.PI / 2);
+  const estructuras = D.NIVELES.map((nv) => estructuraNivel(nv.tiendas.map((t) => t.poly)));
+  const tiendasMallas = [], tapasMallas = [], murosGeo = [[], [], []];
   D.NIVELES.forEach((nv) => {
+    const n = nv.id, y0 = baseNivel(n);
     nv.tiendas.forEach((t) => {
-      const alto = t.cat === 'ancla' ? ALTO_LOCAL + .6 : t.cat === 'local' ? ALTO_LOCAL - .6 : ALTO_LOCAL;
-      const geo = new THREE.ExtrudeGeometry(forma(t.poly), { depth: alto, bevelEnabled: true, bevelThickness: .18, bevelSize: .18, bevelSegments: 1 });
-      geo.rotateX(-Math.PI / 2);
-      const mats = materialesDe(t);
-      const m = new THREE.Mesh(geo, mats);
-      m.position.y = nv.id * ALTO_NIVEL + .18;
-      m.castShadow = true; m.receiveShadow = true;
-      m.userData = { tienda: t, mats, nivel: nv.id };
-      niveles[nv.id].add(m);
-      m.userData.bordes = bordes(geo, niveles[nv.id], m.position, .9);
+      const mats = materialesDe(t), ht = altoTapa(t);
+      // muro neutro hasta la azotea
+      const muro = extruir(t.poly, ALTO_MURO); muro.translate(0, y0, 0); murosGeo[n].push(muro);
+      bordes(muro, niveles[n], null, .9);
+      // techo del local en su color, para que se lea cada tienda desde arriba
+      const tapa = new THREE.Mesh(extruir(t.poly, ht), mats);
+      tapa.position.y = y0 + ALTO_MURO; tapa.userData = { mats, nivel: n };
+      niveles[n].add(tapa); tapasMallas.push(tapa);
+      bordes(tapa.geometry, niveles[n], tapa.position, .9);
+      // volumen completo e invisible: sirve para tocar y resaltar la tienda
+      const m = new THREE.Mesh(extruir(t.poly, ALTO_MURO + ht), mats);
+      m.position.y = y0; m.visible = false;
+      m.userData = { tienda: t, mats, nivel: n };
+      niveles[n].add(m);
       if (t.nombre) pickables.push(m);
       tiendasMallas.push(m);
-      if (nv.id === 0) obstaculos.push(t.poly);
+      if (n === 0) obstaculos.push(t.poly);
+    });
+    // muros que unen los locales (lo que en el plano es la franja blanca entre ellos)
+    estructuras[n].rellenos.forEach((p) => {
+      const g = extruir(p, ALTO_MURO); g.translate(0, y0, 0); murosGeo[n].push(g);
+      bordes(g, niveles[n], null, .9);
+      if (n === 0) obstaculos.push(p);
     });
   });
 
-  // ---------- Frentes de tienda (planta baja): vitrina, toldo y letrero al frente ----------
+  // ---------- Frentes de tienda: vitrina, franja de color, pilastras, toldo y letrero ----------
   const letrerosAtlas = [];
   const vidrio = std('#2a3a4c', { roughness: .1, metalness: .5, emissive: '#ffd59a', emissiveIntensity: .05 });
-  const pb = D.NIVELES[0].tiendas;
-  const fueraDeEdificio = (x, y, propio) => {
-    if (y < -16 || y > 1070 || x > 1188 || x < L.x1 + 45) return false;
-    return !pb.some((o) => o !== propio && D.enPoligono(o.poly, x, y));
+  const libre = (x, y, n) => {
+    if (estructuras[n].macizo(x, y)) return false;
+    if (n === 0) return !(y < -16 || y > 1070 || x > 1188 || x < L.x1 + 45);
+    return D.enPoligono(LOSA_EXT, x, y) || D.enPoligono(LOSA_SO, x, y);
   };
-  function frentesDe(t) {
+  function frentesDe(t, n) {
     const p = t.poly, out = [];
     for (let i = 0; i < p.length; i++) {
       const [ax, ay] = p[i], [bx, by] = p[(i + 1) % p.length];
@@ -227,8 +350,8 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
       let nx = (by - ay) / len, ny = -(bx - ax) / len;
       const mx = (ax + bx) / 2, my = (ay + by) / 2;
       if (D.enPoligono(p, mx + nx * 4, my + ny * 4)) { nx = -nx; ny = -ny; }
-      // el frente debe dar a un espacio abierto (no a otro local)
-      const abierto = [6, 14].every((d) => fueraDeEdificio(mx + nx * d, my + ny * d, t));
+      // el frente debe dar a un pasillo o espacio abierto, no a un muro
+      const abierto = [3, 9, 15].every((d) => libre(mx + nx * d, my + ny * d, n));
       if (abierto) out.push({ mx, my, nx, ny, len });
     }
     out.sort((a, b) => b.len - a.len);
@@ -236,25 +359,32 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
     if (out[1] && out[1].len > 40 && Math.abs(out[1].nx * out[0].nx + out[1].ny * out[0].ny) < .5) elegidos.push(out[1]);
     return elegidos;
   }
-  pb.forEach((t) => {
-    if (!t.nombre || t.cat === 'local') return;
-    const color = COLOR_TIENDA[t.nombre] || D.CATEGORIAS[t.cat].color;
-    const toldoMat = std(color, { roughness: .5 });
-    frentesDe(t).forEach((f, k) => {
-      const g = new THREE.Group();
-      g.position.set(X(f.mx), 0, Z(f.my));
-      g.rotation.y = Math.atan2(f.nx, f.ny);
-      niveles[0].add(g);
-      const ancho = f.len * S;
-      const vit = caja(ancho * .86, 2.5, .12, vidrio, 0, 1.45, .3, g); vit.castShadow = false;
-      const toldo = caja(ancho * .9, .14, 1.3, toldoMat, 0, 2.95, .85, g); toldo.rotation.x = .32;
-      bordes(toldo.geometry, toldo);
-      // franjas blancas en el toldo
-      for (let i = -2; i <= 2; i += 2) { const fr = caja(ancho * .9 / 7, .16, 1.32, basico('#ffffff'), i * ancho * .9 / 7, 2.95, .85, g); fr.rotation.x = .32; fr.castShadow = false; }
-      if (fps && (k === 0 || (f.len > 50 && !movil))) {
-        const w = Math.min(ancho * .84, Math.max(3, t.nombre.length * .55 + 1.6), 13);
-        letrerosAtlas.push({ texto: t.nombre, acento: color, w, h: 1.15, grupo: g, pos: [0, 3.75, .32] });
-      }
+  const blancoBasico = basico('#ffffff');
+  D.NIVELES.forEach((nv) => {
+    const n = nv.id, y0 = baseNivel(n);
+    nv.tiendas.forEach((t) => {
+      const color = colorDe(t), local = t.cat === 'local' || !t.nombre;
+      frentesDe(t, n).forEach((f, k) => {
+        const g = new THREE.Group();
+        g.position.set(X(f.mx), y0, Z(f.my));
+        g.rotation.y = Math.atan2(f.nx, f.ny);
+        niveles[n].add(g);
+        const ancho = f.len * S;
+        const vit = caja(ancho * .84, 2.6, .12, vidrio, 0, 1.4, .1, g); vit.castShadow = false;
+        // franja de color sobre la vitrina: aquí va el nombre
+        caja(ancho * .92, .9, .2, fasciaDe(color), 0, ALTO_MURO - .45, .1, g).castShadow = false;
+        // pilastras que marcan dónde empieza y termina cada local
+        [-1, 1].forEach((l) => caja(.5, ALTO_MURO, .36, pilastra, l * (ancho / 2 - .25), ALTO_MURO / 2, .12, g));
+        if (n === 0 && !local) {
+          const toldo = caja(ancho * .8, .14, 1.3, fasciaDe(color), 0, 2.85, .8, g); toldo.rotation.x = .32;
+          bordes(toldo.geometry, toldo);
+          for (let i = -2; i <= 2; i += 2) { const fr = caja(ancho * .8 / 7, .16, 1.32, blancoBasico, i * ancho * .8 / 7, 2.85, .8, g); fr.rotation.x = .32; fr.castShadow = false; }
+          if (fps && (k === 0 || (f.len > 50 && !movil))) {
+            const w = Math.min(ancho * .8, Math.max(3, t.nombre.length * .55 + 1.6), 13);
+            letrerosAtlas.push({ texto: t.nombre, acento: color, w, h: .82, grupo: g, pos: [0, ALTO_MURO - .45, .22] });
+          }
+        }
+      });
     });
   });
 
@@ -751,8 +881,7 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
 
   /* ---------- Losas de Nivel 1 y 2 con barandales de vidrio alrededor de los vacíos ---------- */
   {
-    const exterior = [[8, 4], [1186, 4], [1186, 1052], [268, 1052], [268, 866], [415, 866], [415, 787], [249, 787], [249, 730], [125, 730], [125, 787], [8, 787]];
-    const suroeste = [[8, 866], [124, 866], [124, 1052], [8, 1052]];
+    const exterior = LOSA_EXT, suroeste = LOSA_SO;
     const huecos = [E.calzada, E.plazaNorte, E.plazaSur, E.diagonalNE, E.diagonalSE];
     const texL = baldosa('#efeae0', '#ddd6c8', 4); texL.repeat.set(.25, .25);
     const matL = std('#ffffff', { map: texL, roughness: .9 });
@@ -877,18 +1006,25 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
   };
   niveles.forEach((g, n) => {
     const porMat = new Map();
-    tiendasMallas.filter((m) => m.userData.nivel === n).forEach((m) => {
+    tapasMallas.filter((m) => m.userData.nivel === n).forEach((m) => {
       if (!porMat.has(m.userData.mats)) porMat.set(m.userData.mats, { tapas: [], lados: [] });
       m.updateMatrix();
       const geo = m.geometry.clone(); geo.applyMatrix4(m.matrix);
       const [tapas, lados] = dividir(geo);
       porMat.get(m.userData.mats).tapas.push(...tapas); porMat.get(m.userData.mats).lados.push(...lados);
-      m.visible = false;
+      m.parent.remove(m);
     });
     porMat.forEach((v, mats) => {
       const t = new THREE.Mesh(mergeGeometries(v.tapas), mats[0]); const l = new THREE.Mesh(mergeGeometries(v.lados), mats[1]);
       [t, l].forEach((x) => { x.castShadow = true; x.receiveShadow = true; x.userData.noFusionar = true; g.add(x); });
       fusionTiendas[n].push({ t, l, mats });
+    });
+    // muros neutros del nivel: azoteas y fachadas en dos mallas
+    const azoteas = [], muros = [];
+    murosGeo[n].forEach((geo) => { const [a, b] = dividir(geo); azoteas.push(...a); muros.push(...b); });
+    [[azoteas, muroMats[0]], [muros, muroMats[1]]].forEach(([geos, mat]) => {
+      if (!geos.length) return;
+      const x = new THREE.Mesh(mergeGeometries(geos), mat); x.castShadow = true; x.receiveShadow = true; x.userData.noFusionar = true; g.add(x);
     });
   });
   // piezas animadas: cada grupo se compacta por dentro
@@ -919,5 +1055,6 @@ export function crearPlaza(D, { modo = 'iso', movil = false } = {}) {
 
   function actualizar(dt, t) { animados.forEach((f) => f(dt, t)); }
 
-  return { scene, raiz, niveles, pickables, tiendasMallas, estaciones, hemi, sol, focoMat, vidrio, mostrarNivel, choca, actualizar };
+  const fachadas = [...Object.values(cacheFascia), ...Object.values(cacheMat).map((m) => m[1])];
+  return { scene, raiz, niveles, pickables, tiendasMallas, fachadas, estaciones, hemi, sol, focoMat, vidrio, mostrarNivel, choca, actualizar };
 }
